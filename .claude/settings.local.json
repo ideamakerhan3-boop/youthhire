@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__list_organizations",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__get_cost",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__confirm_cost",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__create_project",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__apply_migration",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__get_project_url",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__get_publishable_keys",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__create_product",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__create_price",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__create_payment_link",
+      "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__deploy_to_vercel"
+    ]
+  }
+}
