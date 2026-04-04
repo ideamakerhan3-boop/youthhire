@@ -680,11 +680,38 @@ async function dbSaveAccount(email, pw, name, company) {
   var isAdmin = existing && existing.data ? !!existing.data.is_admin : false;
   await _sb.from('accounts').upsert({email: em, pw: hashed, name: name, company: company, is_admin: isAdmin}, {onConflict: 'email'});
 }
+// ── Credits API wrapper (서버 사이드 보안) ──
+async function _creditsApi(body) {
+  try {
+    var r = await fetch('/api/credits-api', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    var d = await r.json();
+    if(!r.ok) { console.error('credits-api error:', d.error); return null; }
+    return d;
+  } catch(e) { console.error('credits-api fetch error:', e); return null; }
+}
+function _getAuthForCredits() {
+  var em=''; try{ em=localStorage.getItem('sj_email')||''; }catch(e){}
+  var pw=_adminPwHash||null;
+  if(!pw) { for(var k in _ACCOUNTS){ if(_ACCOUNTS[k].pw){ pw=_ACCOUNTS[k].pw; break; } } }
+  return {email:em, pw_hash:pw};
+}
 async function dbGetCredits(email) {
+  var auth=_getAuthForCredits();
+  if(auth.email && auth.pw_hash) {
+    var r=await _creditsApi({action:'get', email:auth.email, pw_hash:auth.pw_hash, target_email:email.toLowerCase()});
+    if(r) return r;
+  }
+  // fallback to direct read (SELECT still allowed for anon)
   var r = await _sb.from('credits').select('*').eq('email', email.toLowerCase()).maybeSingle();
   return r.data || {total: 0, used: 0};
 }
 async function dbSaveCredits(email, total, used) {
+  var auth=_getAuthForCredits();
+  if(auth.email && auth.pw_hash) {
+    var r=await _creditsApi({action:'save', email:auth.email, pw_hash:auth.pw_hash, target_email:email.toLowerCase(), total:total, used:used});
+    if(r) return;
+  }
+  // fallback (will fail once RLS is locked)
   await _sb.from('credits').upsert({email: email.toLowerCase(), total: total, used: used, updated_at: new Date().toISOString()}, {onConflict: 'email'});
 }
 async function dbSaveJob(job) {
@@ -1591,14 +1618,12 @@ async function applyPromoCode(code, email, company) {
 
     var credits = p.free_credits || 3;
 
-    // 1. 크레딧 지급 (기존 used 값 보존!)
-    var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-    var curTotal = (cr && cr.data) ? (cr.data.total||0) : 0;
-    var curUsed = (cr && cr.data) ? (cr.data.used||0) : 0;
-    await _sb.from('credits').upsert({
-      email: email, total: curTotal + credits, used: curUsed,
-      updated_at: new Date().toISOString()
-    }, {onConflict:'email'});
+    // 1. 크레딧 지급 (API 우선, fallback으로 직접)
+    var auth=_getAuthForCredits();
+    var cr = await dbGetCredits(email);
+    var curTotal = cr.total||0;
+    var curUsed = cr.used||0;
+    await dbSaveCredits(email, curTotal + credits, curUsed);
 
     // 2. 사용 기록 (달력 기반 무료 기간)
     await _sb.from('promo_usage').insert({ code: code, email: email, credits_given: credits, free_start: p.free_start||null, free_end: p.free_end||null });
@@ -4183,15 +4208,12 @@ async function confirmInterac(txId) {
       await _sb.from('transactions').update({status:'paid'}).eq('ref', tx.ref);
     }
 
-    // 2. DB: credits 업데이트
+    // 2. DB: credits 업데이트 (API 경유)
     var email = (tx.email||'').toLowerCase();
-    var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-    var curTotal = (cr && cr.data) ? (cr.data.total||0) : 0;
-    var curUsed = (cr && cr.data) ? (cr.data.used||0) : 0;
-    await _sb.from('credits').upsert({
-      email: email, total: curTotal + (tx.credits||1), used: curUsed,
-      updated_at: new Date().toISOString()
-    }, {onConflict:'email'});
+    var cr = await dbGetCredits(email);
+    var curTotal = cr.total||0;
+    var curUsed = cr.used||0;
+    await dbSaveCredits(email, curTotal + (tx.credits||1), curUsed);
 
     // 3. DB: 연결된 공고 활성화
     if(tx.pendingJobId) {
@@ -4277,13 +4299,10 @@ async function submitAddTxn() {
 
     // 2. paid/confirmed면 크레딧 지급
     if(status==='paid'||status==='confirmed') {
-      var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-      var curTotal = (cr && cr.data) ? (cr.data.total||0) : 0;
-      var curUsed = (cr && cr.data) ? (cr.data.used||0) : 0;
-      await _sb.from('credits').upsert({
-        email: email, total: curTotal + credits, used: curUsed,
-        updated_at: new Date().toISOString()
-      }, {onConflict:'email'});
+      var cr = await dbGetCredits(email);
+      var curTotal = cr.total||0;
+      var curUsed = cr.used||0;
+      await dbSaveCredits(email, curTotal + credits, curUsed);
     }
 
     // 3. 메모리에 추가
@@ -4330,11 +4349,9 @@ async function cancelTxn(txId) {
       var email = (tx.email||'').toLowerCase();
       var credits = tx.credits||0;
       if(credits > 0) {
-        var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-        if(cr.data) {
-          var newTotal = Math.max(0, (cr.data.total||0) - credits);
-          await _sb.from('credits').update({total: newTotal, updated_at: new Date().toISOString()}).eq('email', email);
-        }
+        var cr = await dbGetCredits(email);
+          var newTotal = Math.max(0, (cr.total||0) - credits);
+          await dbSaveCredits(email, newTotal, cr.used||0);
       }
     }
     tx.status='cancelled';
@@ -4392,18 +4409,17 @@ async function adminRefund(txId) {
       console.warn('adminRefund: Transaction not found in DB (may have been purged) — continuing with refund');
     }
 
-    // 2. credits 차감 (maybeSingle — 레코드 없어도 에러 안 남)
-    var r = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-    if(r.data) {
-      var newTotal = Math.max(0, (r.data.total||0) - credits);
-      var crUpdate = await _sb.from('credits').update({total: newTotal, updated_at: new Date().toISOString()}).eq('email', email);
-      if(crUpdate.error) throw new Error('Credits update failed: ' + crUpdate.error.message);
+    // 2. credits 차감 (API 경유)
+    var cr = await dbGetCredits(email);
+    if(cr.total > 0) {
+      var newTotal = Math.max(0, (cr.total||0) - credits);
+      await dbSaveCredits(email, newTotal, cr.used||0);
     } else {
       console.warn('adminRefund: credits record not found for', email, '— skipping deduction');
     }
 
     // 3. 잔여 크레딧 확인 → 0이면 활성 공고 자동 클로즈 (컨펌 불필요)
-    var newCredits = r.data ? Math.max(0, (r.data.total||0) - credits) : 0;
+    var newCredits = Math.max(0, (cr.total||0) - credits);
     var newUsed = r.data ? (r.data.used||0) : 0;
     var remaining = newCredits - newUsed;
     var activeUserJobs = JOBS.filter(function(j){ return (j.email||'').toLowerCase()===email && j.status==='active'; });
@@ -4591,17 +4607,12 @@ async function doManualTxn() {
     }).select();
     if(txInsert.error) throw new Error('Transaction insert failed: '+txInsert.error.message);
 
-    // 2. credits 업데이트 (paid/confirmed만)
+    // 2. credits 업데이트 (paid/confirmed만, API 경유)
     if(status==='paid'||status==='confirmed'){
-      var cr = await _sb.from('credits').select('*').eq('email', email.toLowerCase()).maybeSingle();
-      var curTotal = cr && cr.data ? (cr.data.total||0) : 0;
-      var curUsed = cr && cr.data ? (cr.data.used||0) : 0;
-      await _sb.from('credits').upsert({
-        email: email.toLowerCase(),
-        total: curTotal + credits,
-        used: curUsed,
-        updated_at: new Date().toISOString()
-      }, {onConflict:'email'});
+      var cr = await dbGetCredits(email.toLowerCase());
+      var curTotal = cr.total||0;
+      var curUsed = cr.used||0;
+      await dbSaveCredits(email.toLowerCase(), curTotal + credits, curUsed);
     }
 
     // 3. 메모리에 추가
@@ -4731,15 +4742,12 @@ function confirmInteracFromModal(txId){
         await _sb.from('transactions').update({status:'paid'}).eq('ref', tx.ref);
       }
 
-      // 2. DB: credits 업데이트
+      // 2. DB: credits 업데이트 (API 경유)
       var email = (tx.email||'').toLowerCase();
-      var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-      var curTotal = (cr && cr.data) ? (cr.data.total||0) : 0;
-      var curUsed = (cr && cr.data) ? (cr.data.used||0) : 0;
-      await _sb.from('credits').upsert({
-        email: email, total: curTotal + (tx.credits||1), used: curUsed,
-        updated_at: new Date().toISOString()
-      }, {onConflict:'email'});
+      var cr = await dbGetCredits(email);
+      var curTotal = cr.total||0;
+      var curUsed = cr.used||0;
+      await dbSaveCredits(email, curTotal + (tx.credits||1), curUsed);
 
       // 3. DB: 연결된 공고 활성화
       if(tx.pendingJobId) {
@@ -5150,14 +5158,11 @@ async function _giftCreditsTo(email, company, amt, note) {
       created_at: new Date().toISOString()
     }).select();
 
-    // 2. DB: credits 테이블 업데이트 (기존 used 보존!)
-    var cr = await _sb.from('credits').select('*').eq('email', email).maybeSingle();
-    var curTotal = (cr && cr.data) ? (cr.data.total||0) : 0;
-    var curUsed = (cr && cr.data) ? (cr.data.used||0) : 0;
-    await _sb.from('credits').upsert({
-      email: email, total: curTotal + amt, used: curUsed,
-      updated_at: new Date().toISOString()
-    }, {onConflict:'email'});
+    // 2. DB: credits 테이블 업데이트 (API 경유)
+    var cr = await dbGetCredits(email);
+    var curTotal = cr.total||0;
+    var curUsed = cr.used||0;
+    await dbSaveCredits(email, curTotal + amt, curUsed);
 
     // 3. 메모리 업데이트 (DB 성공 후에만)
     var dbId = (txRes && txRes.data && txRes.data[0]) ? txRes.data[0].id : null;
@@ -6007,8 +6012,8 @@ function _initApp() {
               if(!webhookOk && _ptRaw && _ptRaw.email && _ptRaw.email.toLowerCase()===savedEmail.toLowerCase()){
                 var _newCredits = (_ptRaw.credits||1);
                 var _newTotal = (cr ? (cr.total||0) : 0) + _newCredits;
-                // credits 테이블 업데이트
-                _sb.from('credits').upsert({email:savedEmail.toLowerCase(), total:_newTotal, used:(cr?cr.used||0:0), updated_at:new Date().toISOString()},{onConflict:'email'}).then(function(r){ if(r.error) console.error('credits upsert error:', r.error); }).catch(function(e){ console.error('credits upsert error:', e); });
+                // credits 테이블 업데이트 (API 경유)
+                dbSaveCredits(savedEmail.toLowerCase(), _newTotal, (cr?cr.used||0:0)).catch(function(e){ console.error('credits save error:', e); });
                 // transactions 테이블에 저장 (중복 방지: ref로 체크)
                 var _txRef = 'stripe_' + _ptRaw.ts;
                 _sb.from('transactions').select('id').eq('ref', _txRef).then(function(chk){
@@ -6046,7 +6051,7 @@ function _initApp() {
               // credits 조회 실패 시에도 pending txn으로 복원 시도
               if(_ptRaw && _ptRaw.email && _ptRaw.email.toLowerCase()===savedEmail.toLowerCase()){
                 var _nc = _ptRaw.credits||1;
-                _sb.from('credits').upsert({email:savedEmail.toLowerCase(), total:_nc, used:0, updated_at:new Date().toISOString()},{onConflict:'email'}).then(function(r){ if(r.error) console.error('credits upsert error:', r.error); }).catch(function(e){ console.error('credits upsert error:', e); });
+                dbSaveCredits(savedEmail.toLowerCase(), _nc, 0).catch(function(e){ console.error('credits save error:', e); });
                 var _txRef2 = 'stripe_' + _ptRaw.ts;
                 _sb.from('transactions').insert({email:savedEmail.toLowerCase(),pkg:_ptRaw.pkg||'single',amount:String(_ptRaw.amount||0),credits:_nc,method:'card',status:'paid',ref:_txRef2}).then(function(r){ if(r.error) console.error('txn insert error:', r.error); }).catch(function(e){ console.error('txn insert error:', e); });
                 _totalCredits = _nc; _usedCredits = 0; syncCredits();
