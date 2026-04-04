@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/expire-jobs",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/export-data",
+      "schedule": "0 3 * * 0"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Processing...</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#1E1E1E;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif}
+.wrap{text-align:center}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:#C8392B;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+p{color:rgba(255,255,255,.5);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="spinner"></div>
+  <p>Processing payment…</p>
+</div>
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+  var url = '/index.html?checkout=success';
+  if(sessionId) url += '&session_id=' + sessionId;
+  window.location.replace(url);
+})();
+</script>
+</body>
+</html>
