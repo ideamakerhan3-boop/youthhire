@@ -177,17 +177,24 @@ img{display:block;max-width:100%}
 .hh-hero-title em{font-style:normal;color:var(--red);position:relative;white-space:nowrap}
 .hh-hero-title em::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:14px;background:#FEE440;z-index:-1;border-radius:4px}
 .hh-hero-sub{font-size:clamp(15px,1.8vw,19px);color:var(--gray);line-height:1.55;max-width:580px;margin:0 auto 36px;font-weight:500}
-.hh-searchbig{max-width:720px;margin:0 auto 28px;background:#fff;border:2px solid #E5E7EB;border-radius:20px;box-shadow:0 12px 40px rgba(15,23,42,.08);display:flex;align-items:center;padding:8px;gap:4px;transition:all .18s}
+.hh-searchbig{max-width:760px;margin:0 auto 12px;background:#fff;border:2px solid #E5E7EB;border-radius:100px;box-shadow:0 12px 40px rgba(15,23,42,.08);display:flex;align-items:center;padding:6px 6px 6px 10px;gap:4px;transition:all .18s;position:relative}
 .hh-searchbig:focus-within{border-color:var(--red);box-shadow:0 16px 48px rgba(37,99,235,.18)}
+.hh-searchbig-locwrap{display:flex;align-items:center;flex:1;min-width:0;position:relative}
 .hh-searchbig-ico{font-size:17px;padding:0 6px 0 14px;color:var(--muted);flex-shrink:0;line-height:1}
 .hh-searchbig-input{flex:1;border:none;outline:none;font-size:16px;font-weight:500;color:var(--ink);background:transparent;min-width:0;padding:16px 4px;font-family:inherit}
 .hh-searchbig-input::placeholder{color:#9CA3AF;font-weight:500}
 .hh-searchbig-divider{width:1.5px;height:28px;background:var(--border);flex-shrink:0;margin:0 4px}
 .hh-searchbig-select{border:none;outline:none;font-size:15px;font-weight:600;color:var(--ink);background:transparent;appearance:none;-webkit-appearance:none;padding:16px 32px 16px 4px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;cursor:pointer;min-width:140px;font-family:inherit}
-.hh-searchbig-btn{background:var(--red);color:#fff;border:none;padding:0 28px;height:54px;border-radius:14px;font-size:15.5px;font-weight:700;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:-.01em;font-family:inherit}
-.hh-searchbig-btn:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,235,.3)}
-.hh-searchbig-clear{background:none;border:none;color:#9CA3AF;font-size:17px;padding:0 6px;cursor:pointer;flex-shrink:0}
+.hh-searchbig-btn{background:var(--red);color:#fff;border:none;padding:0 30px;height:52px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:-.01em;font-family:inherit}
+.hh-searchbig-btn:hover{background:var(--red2);box-shadow:0 8px 20px rgba(37,99,235,.35)}
+.hh-searchbig-clear{background:none;border:none;color:#9CA3AF;font-size:16px;padding:0 6px;cursor:pointer;flex-shrink:0;line-height:1}
 .hh-searchbig-clear:hover{color:var(--ink)}
+.hh-loc-sugg{position:absolute;left:0;right:0;top:calc(100% + 10px);background:#fff;border:1.5px solid var(--border);border-radius:18px;box-shadow:0 16px 48px rgba(15,23,42,.14);max-height:340px;overflow-y:auto;z-index:50;padding:8px 0;display:none}
+.hh-loc-sugg.open{display:block}
+.hh-loc-sugg-item{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;font-size:14.5px;color:var(--ink);font-weight:500;transition:background .1s}
+.hh-loc-sugg-item:hover,.hh-loc-sugg-item.hl{background:var(--redl);color:var(--red)}
+.hh-loc-sugg-ico{font-size:14px;color:var(--muted);flex-shrink:0}
+.hh-loc-sugg-item:hover .hh-loc-sugg-ico,.hh-loc-sugg-item.hl .hh-loc-sugg-ico{color:var(--red)}
 .hh-pills-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;max-width:780px;margin:0 auto 18px}
 .hh-pills-label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-right:6px}
 .hh-pill{display:inline-flex!important;align-items:center;gap:6px;background:#fff!important;border:1.5px solid var(--border)!important;color:var(--ink)!important;padding:10px 16px!important;border-radius:100px!important;font-size:14px!important;font-weight:600!important;cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:-.01em!important;box-shadow:none!important}
@@ -1602,17 +1609,68 @@ function requireRegister(returnTo) {
   showToast('Create an account to continue.','warn');
 }
 
+// ═══ CANADA CITIES (autocomplete) ═══
+var CA_CITIES = [
+  'Toronto, ON','Vancouver, BC','Montreal, QC','Calgary, AB','Ottawa, ON','Edmonton, AB',
+  'Mississauga, ON','Winnipeg, MB','Quebec City, QC','Hamilton, ON','Brampton, ON','Surrey, BC',
+  'Halifax, NS','Laval, QC','London, ON','Markham, ON','Vaughan, ON','Gatineau, QC',
+  'Longueuil, QC','Burnaby, BC','Saskatoon, SK','Kitchener, ON','Windsor, ON','Regina, SK',
+  'Richmond, BC','Richmond Hill, ON','Oakville, ON','Burlington, ON','Greater Sudbury, ON',
+  'Sherbrooke, QC','Oshawa, ON','Saguenay, QC','Lévis, QC','Barrie, ON','Abbotsford, BC',
+  'Coquitlam, BC','Trois-Rivières, QC','St. Catharines, ON','Guelph, ON','Cambridge, ON',
+  'Whitby, ON','Kelowna, BC','Kingston, ON','Ajax, ON','Langley, BC','Saanich, BC','Terrebonne, QC',
+  'Milton, ON','St. John\'s, NL','Thunder Bay, ON','Waterloo, ON','Delta, BC','Chatham-Kent, ON',
+  'Red Deer, AB','Strathcona County, AB','Brantford, ON','Cape Breton, NS','Saint John, NB',
+  'Pickering, ON','Lethbridge, AB','Kamloops, BC','Niagara Falls, ON','Nanaimo, BC',
+  'Victoria, BC','Moncton, NB','Fredericton, NB','Peterborough, ON','Sault Ste. Marie, ON',
+  'Sarnia, ON','Wood Buffalo, AB','New Westminster, BC','Châteauguay, QC','Drummondville, QC',
+  'Saint-Jérôme, QC','Granby, QC','Saint-Hyacinthe, QC','Shawinigan, QC','Dollard-Des Ormeaux, QC',
+  'Medicine Hat, AB','Chilliwack, BC','Maple Ridge, BC','North Vancouver, BC','Prince George, BC',
+  'Vernon, BC','Penticton, BC','Campbell River, BC','Courtenay, BC','Charlottetown, PEI',
+  'Fort McMurray, AB','Grande Prairie, AB','Airdrie, AB','St. Albert, AB','Spruce Grove, AB',
+  'Yellowknife, NT','Whitehorse, YT','Iqaluit, NU','Remote, Canada','Hybrid, Canada'
+];
+function hhLocSuggest(inp){
+  var v = (inp.value||'').trim().toLowerCase();
+  var clear = document.getElementById('loc-clear'); if(clear) clear.style.display = v ? 'inline-flex' : 'none';
+  var box = document.getElementById('hh-loc-sugg'); if(!box) return;
+  var list;
+  if(!v){ list = CA_CITIES.slice(0,10); }
+  else { list = CA_CITIES.filter(function(c){ return c.toLowerCase().indexOf(v)>=0; }).slice(0,10); }
+  if(!list.length){ box.classList.remove('open'); return; }
+  box.innerHTML = list.map(function(c){
+    return '<div class="hh-loc-sugg-item" onmousedown="hhPickLoc(\''+c.replace(/'/g,"\\'")+'\')"><span class="hh-loc-sugg-ico">📍</span><span>'+c+'</span></div>';
+  }).join('');
+  box.classList.add('open');
+}
+function hhPickLoc(val){
+  var inp = document.getElementById('s-prov'); if(!inp) return;
+  inp.value = val;
+  document.getElementById('hh-loc-sugg').classList.remove('open');
+  var clear = document.getElementById('loc-clear'); if(clear) clear.style.display = 'inline-flex';
+  doSearch();
+}
+function hhLocKeys(e){
+  var box = document.getElementById('hh-loc-sugg');
+  var items = box ? box.querySelectorAll('.hh-loc-sugg-item') : [];
+  var cur = box ? box.querySelector('.hh-loc-sugg-item.hl') : null;
+  var idx = cur ? Array.prototype.indexOf.call(items, cur) : -1;
+  if(e.key==='ArrowDown'){ e.preventDefault(); if(cur) cur.classList.remove('hl'); var n=items[Math.min(idx+1,items.length-1)]; if(n){n.classList.add('hl'); n.scrollIntoView({block:'nearest'});} }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); if(cur) cur.classList.remove('hl'); var p=items[Math.max(idx-1,0)]; if(p){p.classList.add('hl'); p.scrollIntoView({block:'nearest'});} }
+  else if(e.key==='Enter'){ if(cur){ e.preventDefault(); hhPickLoc(cur.textContent.trim()); } else { doSearch(); } }
+  else if(e.key==='Escape'){ box.classList.remove('open'); }
+}
+
 // ═══ SEARCH ═══
 function doSearch() {
   var kw = (document.getElementById('s-kw').value||'').trim().toLowerCase();
-  var pv = (document.getElementById('s-prov').value||'');
+  var pv = (document.getElementById('s-prov').value||'').trim();
   // kw-clear 버튼 표시/숨김
   var kwClear=document.getElementById('kw-clear'); if(kwClear) kwClear.style.display=kw?'flex':'none';
-  // PC↔모바일 select 동기화
+  var locClear=document.getElementById('loc-clear'); if(locClear) locClear.style.display=pv?'inline-flex':'none';
+  // legacy: mobile select (removed from hero but keep guard)
   var mobSel=document.getElementById('s-prov-mob');
   if(mobSel && mobSel.value!==pv) mobSel.value=pv;
-  var pcSel=document.getElementById('s-prov');
-  if(pcSel) pcSel.style.outline=pv?'2px solid #F5C842':'none';
   var sort = (document.getElementById('s-sort').value||'date');
   var types = Array.from(document.querySelectorAll('.f-type:checked')).map(function(c){return c.value;});
   var cats = Array.from(document.querySelectorAll('.f-cat:checked')).map(function(c){return c.value;});
@@ -1626,7 +1684,11 @@ function doSearch() {
     // closed/deleted/pending은 완전 제외, expired는 표시 유지
     if(j.status==='closed' || j.status==='deleted' || j.status==='pending_payment' || j.status==='pending_review') return false;
     if(kw && j.title.toLowerCase().indexOf(kw)<0 && j.company.toLowerCase().indexOf(kw)<0 && (j.loc||'').toLowerCase().indexOf(kw)<0 && (j.cat||'').toLowerCase().indexOf(kw)<0) return false;
-    if(pv && j.prov!==pv) return false;
+    if(pv){
+      var pvLow = pv.toLowerCase();
+      var hay = ((j.loc||'') + ' ' + (j.prov||'')).toLowerCase();
+      if(hay.indexOf(pvLow)<0) return false;
+    }
     if(types.length && types.indexOf(j.type)<0) return false;
     if(cats.length && !cats.some(function(c){ return (j.cat||'').toLowerCase().indexOf(c.toLowerCase())>=0; })) return false;
     if(srcs.length && srcs.indexOf(j.src)<0) return false;
@@ -1679,8 +1741,8 @@ function clearFilters() {
   document.getElementById('s-kw').value='';
   document.getElementById('s-prov').value='';
   var mob=document.getElementById('s-prov-mob'); if(mob){mob.value='';mob.style.borderColor='rgba(255,255,255,.15)';}
-  var pcSel=document.getElementById('s-prov'); if(pcSel) pcSel.style.outline='none';
   var kwClear=document.getElementById('kw-clear'); if(kwClear) kwClear.style.display='none';
+  var locClear=document.getElementById('loc-clear'); if(locClear) locClear.style.display='none';
   doSearch();
 }
 
@@ -6662,21 +6724,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         <input type="text" id="s-kw" class="hh-searchbig-input" placeholder="Job title, skill, or company" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" name="search-x" aria-label="Keyword" oninput="var c=document.getElementById('kw-clear');if(c)c.style.display=this.value?'inline-flex':'none';" onkeydown="if(event.key==='Enter')doSearch()">
         <button id="kw-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-kw').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
         <div class="hh-searchbig-divider"></div>
-        <span class="hh-searchbig-ico">📍</span>
-        <select id="s-prov" class="hh-searchbig-select" aria-label="Province" onchange="doSearch()">
-          <option value="">All Canada</option>
-          <option value="British Columbia">British Columbia</option>
-          <option value="Alberta">Alberta</option>
-          <option value="Saskatchewan">Saskatchewan</option>
-          <option value="Manitoba">Manitoba</option>
-          <option value="Ontario">Ontario</option>
-          <option value="Quebec">Québec</option>
-          <option value="New Brunswick">New Brunswick</option>
-          <option value="Nova Scotia">Nova Scotia</option>
-          <option value="PEI">PEI</option>
-          <option value="Newfoundland">Newfoundland</option>
-        </select>
-        <button class="hh-searchbig-btn" onclick="doSearch()">Search</button>
+        <div class="hh-searchbig-locwrap">
+          <span class="hh-searchbig-ico">📍</span>
+          <input type="text" id="s-prov" class="hh-searchbig-input" placeholder="City, province, or remote" autocomplete="off" aria-label="Location" oninput="hhLocSuggest(this)" onfocus="hhLocSuggest(this)" onblur="setTimeout(function(){document.getElementById('hh-loc-sugg').classList.remove('open')},150)" onkeydown="hhLocKeys(event)" style="min-width:0">
+          <button id="loc-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-prov').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
+          <div id="hh-loc-sugg" class="hh-loc-sugg" role="listbox"></div>
+        </div>
+        <button class="hh-searchbig-btn" onclick="doSearch()">Find Jobs</button>
       </div>
 
       <span id="home-stats-bar" style="display:none"></span>
