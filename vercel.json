@@ -53,5 +53,18 @@
       "path": "/api/health-check",
       "schedule": "0 12 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/expire-jobs.js":    { "maxDuration": 60, "memory": 512 },
+    "api/export-data.js":    { "maxDuration": 60, "memory": 512 },
+    "api/health-check.js":   { "maxDuration": 30, "memory": 256 },
+    "api/stripe-webhook.js": { "maxDuration": 30, "memory": 512 },
+    "api/job-page.js":       { "maxDuration": 10, "memory": 256 },
+    "api/sitemap.js":        { "maxDuration": 10, "memory": 256 },
+    "api/create-checkout.js":{ "maxDuration": 10, "memory": 256 },
+    "api/refund.js":         { "maxDuration": 15, "memory": 256 },
+    "api/auth-api.js":       { "maxDuration": 10, "memory": 512 },
+    "api/admin-api.js":      { "maxDuration": 15, "memory": 512 },
+    "api/credits-api.js":    { "maxDuration": 15, "memory": 512 }
+  }
 }
