@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   }
 
   const p = PACKAGES[pkg];
-  const origin = req.headers.origin || 'https://settlejobs.vercel.app';
+  const origin = req.headers.origin || 'https://canadayouthhire.ca';
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       },
     });
 
-    return res.status(200).json({ url: session.url });
+    return res.status(200).json({ url: session.url, session_id: session.id });
   } catch (err) {
     console.error('Checkout session error:', err.message);
     return res.status(500).json({ error: err.message });

@@ -16,7 +16,19 @@
       "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__list_projects",
       "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__search_vercel_documentation",
       "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__get_project",
-      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__list_tables"
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__list_tables",
+      "mcp__693286dd-a13c-4ab7-a2f6-3ce90aba047f__execute_sql",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__get_stripe_account_info",
+      "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__list_deployments",
+      "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__web_fetch_vercel_url",
+      "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__get_runtime_logs",
+      "mcp__d63f8df7-cd73-4cac-bf7b-85c8d3639118__get_deployment_build_logs",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__stripe_api_search",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__stripe_api_execute",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__search_stripe_documentation",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__search_stripe_resources",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__list_products",
+      "mcp__8abced01-aa79-4cfc-b640-f80b8ee0be9d__fetch_stripe_resources"
     ]
   }
 }

@@ -17,7 +17,6 @@ function parseExpDate(expStr) {
   } catch(e) { return null; }
 }
 
-// EmailJS REST API로 이메일 발송 (서버사이드)
 async function sendExpiryEmail(toEmail, toName, jobTitle, expDate, daysLeft) {
   const serviceId  = process.env.EMAILJS_SERVICE_ID;
   const templateId = process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome';
@@ -29,25 +28,23 @@ async function sendExpiryEmail(toEmail, toName, jobTitle, expDate, daysLeft) {
     return false;
   }
 
-  const params = {
-    to_email:    toEmail,
-    to_name:     toName || toEmail,
-    subject:     `Your job posting "${jobTitle}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
-    heading:     'Job Posting Expiring Soon',
-    message:     `Your job posting "${jobTitle}" will expire on ${expDate}. If you'd like to keep it active, please renew it before the expiry date. Visit your dashboard to manage your postings.`,
-    button_text: 'Go to Dashboard',
-  };
-
   try {
     const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        service_id:      serviceId,
-        template_id:     templateId,
-        user_id:         publicKey,
-        accessToken:     privateKey,
-        template_params: params,
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: publicKey,
+        accessToken: privateKey,
+        template_params: {
+          to_email:    toEmail,
+          to_name:     toName || toEmail,
+          subject:     `Your job posting "${jobTitle}" expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
+          heading:     'Job Posting Expiring Soon',
+          message:     `Your job posting "${jobTitle}" will expire on ${expDate}. If you'd like to keep it active, please renew it before the expiry date. Visit your dashboard to manage your postings.`,
+          button_text: 'Go to Dashboard',
+        },
       }),
     });
 
@@ -64,9 +61,7 @@ async function sendExpiryEmail(toEmail, toName, jobTitle, expDate, daysLeft) {
 }
 
 // Vercel Cron: 매일 06:00 UTC에 실행
-// GET /api/expire-jobs
 export default async function handler(req, res) {
-  // Vercel Cron 인증 (CRON_SECRET 필수)
   if (!process.env.CRON_SECRET) {
     console.error('CRON_SECRET is not configured');
     return res.status(500).json({ error: 'CRON_SECRET not configured' });
@@ -77,9 +72,10 @@ export default async function handler(req, res) {
 
   try {
     const now = new Date();
+    // Select only needed columns
     const { data: activeJobs, error } = await sb
       .from('jobs')
-      .select('id, job_id, email, title, company, exp_date, status, notified_expiry')
+      .select('id, job_id, email, title, company, exp_date, notified_expiry')
       .eq('status', 'active');
 
     if (error) throw error;
@@ -87,47 +83,64 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'No active jobs', expired: 0, notified: 0 });
     }
 
-    let expired = 0;
-    let notified = 0;
+    // Separate expired vs needs-notification
+    const toExpire = [];
+    const toNotify = [];
 
     for (const job of activeJobs) {
       const expDate = parseExpDate(job.exp_date);
       if (!expDate) continue;
 
-      // ── 만료 처리 ──
       if (expDate < now) {
-        await sb.from('jobs').update({ status: 'expired' }).eq('id', job.id);
-        expired++;
-        continue;
+        toExpire.push(job.id);
+      } else if (!job.notified_expiry) {
+        const daysLeft = Math.ceil((expDate.getTime() - now.getTime()) / 86400000);
+        if (daysLeft <= 7 && daysLeft > 0) {
+          toNotify.push({ ...job, daysLeft });
+        }
       }
+    }
 
-      // ── 7일 전 알림 ──
-      if (job.notified_expiry) continue; // 이미 알림 전송됨
+    // Batch expire: single UPDATE for all expired jobs
+    if (toExpire.length > 0) {
+      await sb.from('jobs').update({ status: 'expired' }).in('id', toExpire);
+    }
 
-      const msLeft = expDate.getTime() - now.getTime();
-      const daysLeft = Math.ceil(msLeft / 86400000);
-
-      if (daysLeft <= 7 && daysLeft > 0) {
-        // 이메일 발송 시도
-        const sent = await sendExpiryEmail(
+    // Parallel email sends with concurrency limit (max 5 at a time)
+    let notified = 0;
+    const CONCURRENCY = 5;
+    for (let i = 0; i < toNotify.length; i += CONCURRENCY) {
+      const batch = toNotify.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map(job => sendExpiryEmail(
           job.email,
           job.company || job.email,
           job.title || 'Untitled',
           job.exp_date,
-          daysLeft
-        );
+          job.daysLeft
+        ))
+      );
 
-        // 발송 성공/실패 상관없이 한 번만 시도 (무한 재시도 방지)
-        await sb.from('jobs').update({ notified_expiry: true }).eq('id', job.id);
-        if (sent) notified++;
-        console.log(`📧 Expiry notice ${sent ? 'sent' : 'skipped'}: ${job.title} → ${job.email} (${daysLeft}d left)`);
+      // Mark notified for successful sends
+      const successIds = [];
+      for (let j = 0; j < results.length; j++) {
+        if (results[j].status === 'fulfilled' && results[j].value === true) {
+          successIds.push(batch[j].id);
+          notified++;
+        }
+        console.log(`📧 Expiry notice ${results[j].status === 'fulfilled' && results[j].value ? 'sent' : 'skipped'}: ${batch[j].title} → ${batch[j].email} (${batch[j].daysLeft}d left)`);
+      }
+
+      // Batch update notified flags
+      if (successIds.length > 0) {
+        await sb.from('jobs').update({ notified_expiry: true }).in('id', successIds);
       }
     }
 
-    console.log(`Cron: expired ${expired}, notified ${notified}/${activeJobs.length} jobs`);
+    console.log(`Cron: expired ${toExpire.length}, notified ${notified}/${activeJobs.length} jobs`);
     return res.status(200).json({
-      message: `Expired ${expired} jobs, notified ${notified}`,
-      expired,
+      message: `Expired ${toExpire.length} jobs, notified ${notified}`,
+      expired: toExpire.length,
       notified,
       total: activeJobs.length,
     });

@@ -1,4 +1,33 @@
 {
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/pricing", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/register", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/detail", "destination": "/index.html" },
+    { "source": "/post-job", "destination": "/index.html" },
+    { "source": "/post-flow", "destination": "/index.html" },
+    { "source": "/checkout", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/forgot", "destination": "/index.html" },
+    { "source": "/home", "destination": "/index.html" },
+    { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" }
+  ],
+  "headers": [
+    {
+      "source": "/sitemap.xml",
+      "headers": [{ "key": "Content-Type", "value": "application/xml" }]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [{ "key": "Content-Type", "value": "text/plain" }]
+    }
+  ],
   "crons": [
     {
       "path": "/api/expire-jobs",
@@ -7,6 +36,10 @@
     {
       "path": "/api/export-data",
       "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/health-check",
+      "schedule": "0 12 * * *"
     }
   ]
 }

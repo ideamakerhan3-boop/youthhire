@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { sendVoiceCall, sendSmsAlert } from './_lib/alerts.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const sb = createClient(
@@ -9,6 +10,14 @@ const sb = createClient(
 
 // raw body 필요 (서명 검증용)
 export const config = { api: { bodyParser: false } };
+
+async function alertOrphanRefund(paymentIntentId, amount) {
+  const subject = 'TIJOBS REFUND ORPHAN';
+  const body = `Stripe refund received but no matching transaction. PI=${paymentIntentId} amount=${amount || '?'}. Manual review required.`;
+  const voiceMsg = `YouthHire alert. A Stripe refund arrived but no matching transaction was found in the database. Manual review required immediately.`;
+  await sendSmsAlert(subject, body);
+  await sendVoiceCall(voiceMsg);
+}
 
 const PACKAGES = {
   single: { credits: 1,  amount: 9.99  },
@@ -62,15 +71,15 @@ export default async function handler(req, res) {
         return res.status(200).json({ received: true });
       }
 
-      // 금액 검증: Stripe 실제 결제 금액(센트)과 패키지 가격 비교
+      // 금액 검증
       const expectedCents = Math.round(pkgInfo.amount * 100);
       const actualCents = session.amount_total;
       if (actualCents && actualCents !== expectedCents) {
-        console.error('Amount mismatch:', { expected: expectedCents, actual: actualCents, pkg });
-        return res.status(200).json({ received: true });
+        console.error('Amount mismatch — BLOCKED:', { expected: expectedCents, actual: actualCents, pkg, email });
+        return res.status(400).json({ error: 'Amount mismatch — payment not processed' });
       }
 
-      // 중복 방지
+      // 중복 방지 — select only id
       const { data: existing } = await sb
         .from('transactions')
         .select('id')
@@ -102,15 +111,14 @@ export default async function handler(req, res) {
         }
       }
 
-      // 크레딧 추가 (atomic — race condition 방지)
+      // 크레딧 추가 (atomic)
       const { data: cr } = await sb
         .from('credits')
-        .select('*')
+        .select('total, used')
         .eq('email', email)
         .maybeSingle();
 
       if (cr) {
-        // 기존 레코드: optimistic lock으로 atomic 처리
         const { error: updErr } = await sb
           .from('credits')
           .update({
@@ -118,20 +126,25 @@ export default async function handler(req, res) {
             updated_at: new Date().toISOString(),
           })
           .eq('email', email)
-          .eq('total', cr.total); // optimistic lock
+          .eq('total', cr.total);
 
         if (updErr) {
-          // 충돌 시 1회 재시도
-          const { data: cr2 } = await sb.from('credits').select('*').eq('email', email).maybeSingle();
+          const { data: cr2 } = await sb.from('credits').select('total').eq('email', email).maybeSingle();
           if (cr2) {
-            await sb.from('credits').update({
+            const { error: retryErr } = await sb.from('credits').update({
               total: cr2.total + credits,
               updated_at: new Date().toISOString(),
             }).eq('email', email);
+            if (retryErr) {
+              console.error('CRITICAL: credit grant retry failed for paid user', email, retryErr.message);
+              return res.status(500).json({ error: 'Credit grant failed after payment' });
+            }
+          } else {
+            console.error('CRITICAL: credits row disappeared during retry', email);
+            return res.status(500).json({ error: 'Credit state inconsistent' });
           }
         }
       } else {
-        // 신규 레코드
         await sb.from('credits').insert({
           email,
           total: credits,
@@ -140,7 +153,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // 트랜잭션 저장 (payment_intent + 카드정보 포함)
+      // 트랜잭션 저장
       await sb.from('transactions').insert({
         email,
         pkg,
@@ -162,16 +175,16 @@ export default async function handler(req, res) {
       const charge          = event.data.object;
       const paymentIntentId = charge.payment_intent;
 
-      // 방법 1: payment_intent 컬럼 직접 매핑
+      // 방법 1: payment_intent 직접 매핑
       let txn = null;
       const { data: txn1 } = await sb
         .from('transactions')
-        .select('*')
+        .select('id, email, credits, status')
         .eq('payment_intent', paymentIntentId)
         .maybeSingle();
       txn = txn1;
 
-      // 방법 2: Stripe API로 session 역추적 → ref로 매핑
+      // 방법 2: Stripe session 역추적
       if (!txn && paymentIntentId) {
         try {
           const sessions = await stripe.checkout.sessions.list({
@@ -182,7 +195,7 @@ export default async function handler(req, res) {
           if (session) {
             const { data: txn2 } = await sb
               .from('transactions')
-              .select('*')
+              .select('id, email, credits, status')
               .eq('ref', session.id)
               .maybeSingle();
             txn = txn2;
@@ -193,8 +206,9 @@ export default async function handler(req, res) {
       }
 
       if (!txn) {
-        console.warn('Refund: no matching txn for PI:', paymentIntentId);
-        return res.status(200).json({ received: true });
+        console.error('⚠️ REFUND ORPHAN: Stripe refunded PI:', paymentIntentId, 'but no matching transaction found in DB. Manual review required.');
+        try { await alertOrphanRefund(paymentIntentId, charge.amount_refunded); } catch (e) { console.error('Alert send failed:', e.message); }
+        return res.status(500).json({ error: 'Transaction not found for refund — will retry' });
       }
 
       if (txn.status === 'refunded') {
@@ -203,15 +217,19 @@ export default async function handler(req, res) {
       }
 
       // DB 상태 업데이트
-      await sb
+      const { error: txnUpdErr } = await sb
         .from('transactions')
         .update({ status: 'refunded', refunded_at: new Date().toISOString() })
         .eq('id', txn.id);
+      if (txnUpdErr) {
+        console.error('Refund txn update failed:', txnUpdErr.message, 'txn.id=', txn.id);
+        return res.status(500).json({ error: 'Transaction status update failed — will retry' });
+      }
 
-      // 크레딧 차감 (atomic — race condition 방지)
+      // 크레딧 차감 (atomic)
       const { data: cr } = await sb
         .from('credits')
-        .select('*')
+        .select('total, used')
         .eq('email', txn.email)
         .maybeSingle();
 
@@ -224,17 +242,26 @@ export default async function handler(req, res) {
             updated_at: new Date().toISOString(),
           })
           .eq('email', txn.email)
-          .eq('total', cr.total); // optimistic lock
+          .eq('total', cr.total);
 
         if (updErr) {
-          const { data: cr2 } = await sb.from('credits').select('*').eq('email', txn.email).maybeSingle();
+          const { data: cr2 } = await sb.from('credits').select('total').eq('email', txn.email).maybeSingle();
           if (cr2) {
-            await sb.from('credits').update({
+            const { error: retryErr } = await sb.from('credits').update({
               total: Math.max(0, (cr2.total || 0) - (txn.credits || 0)),
               updated_at: new Date().toISOString(),
             }).eq('email', txn.email);
+            if (retryErr) {
+              console.error('Refund credits retry failed:', retryErr.message, 'email=', txn.email);
+              return res.status(500).json({ error: 'Credit deduction failed — will retry' });
+            }
+          } else {
+            console.error('Refund credits row vanished on retry, email=', txn.email);
+            return res.status(500).json({ error: 'Credit row missing — will retry' });
           }
         }
+      } else {
+        console.warn('Refund: no credits row for', txn.email, '— txn marked refunded but nothing to deduct');
       }
 
       console.log(`💸 Refunded: ${txn.email} -${txn.credits} credits`);
@@ -244,7 +271,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Webhook error:', err.message);
-    // DB 오류 등 재시도 가능한 에러는 500 반환 → Stripe가 재시도함
     return res.status(500).json({ error: 'Internal processing error' });
   }
 }

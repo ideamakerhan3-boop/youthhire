@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /checkout
+Disallow: /post-job
+Disallow: /post-flow
+
+Sitemap: https://www.canadayouthhire.ca/sitemap.xml
