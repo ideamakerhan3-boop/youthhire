@@ -184,7 +184,7 @@ img{display:block;max-width:100%}
 .pj-chips-head{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
 
 /* ═══ HH HERO V2 (light, big, Indeed-style for youth) ═══ */
-.hh-banner{background:linear-gradient(90deg,#065F46,#047857);color:#fff;padding:11px 4%;text-align:center;font-size:13px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.hh-banner{background:linear-gradient(90deg,#1E40AF,#2563EB);color:#fff;padding:11px 4%;text-align:center;font-size:13px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .hh-banner strong{color:#FFE27A;font-weight:800}
 .hh-hero{background:linear-gradient(180deg,#F2F6FF 0%,#FFFFFF 100%);padding:72px 5% 56px;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
 .hh-hero::before{content:"";position:absolute;top:-180px;right:-160px;width:520px;height:520px;background:radial-gradient(circle,rgba(37,99,235,.1) 0%,transparent 70%);border-radius:50%;pointer-events:none}
@@ -198,6 +198,7 @@ img{display:block;max-width:100%}
 .hh-hero-sub{font-size:clamp(15px,1.8vw,19px);color:var(--gray);line-height:1.55;max-width:580px;margin:0 auto 36px;font-weight:500}
 .hh-searchbig{max-width:760px;margin:0 auto 12px;background:#fff;border:2px solid #E5E7EB;border-radius:100px;box-shadow:0 12px 40px rgba(15,23,42,.08);display:flex;align-items:center;padding:6px 6px 6px 10px;gap:4px;transition:all .18s;position:relative}
 .hh-searchbig:focus-within{border-color:var(--red);box-shadow:0 16px 48px rgba(37,99,235,.18)}
+.hh-searchbig-kwwrap{display:flex;align-items:center;flex:1;min-width:0;position:relative}
 .hh-searchbig-locwrap{display:flex;align-items:center;flex:1;min-width:0;position:relative}
 .hh-searchbig-ico{font-size:17px;padding:0 6px 0 14px;color:var(--muted);flex-shrink:0;line-height:1}
 .hh-searchbig-input{flex:1;border:none;outline:none;font-size:16px;font-weight:500;color:var(--ink);background:transparent;min-width:0;padding:16px 4px;font-family:inherit}
@@ -208,9 +209,10 @@ img{display:block;max-width:100%}
 .hh-searchbig-btn:hover{background:var(--red2);box-shadow:0 8px 20px rgba(37,99,235,.35)}
 .hh-searchbig-clear{background:none;border:none;color:#9CA3AF;font-size:16px;padding:0 6px;cursor:pointer;flex-shrink:0;line-height:1}
 .hh-searchbig-clear:hover{color:var(--ink)}
-.hh-loc-sugg{position:absolute;left:0;right:0;top:calc(100% + 10px);background:#fff;border:1.5px solid var(--border);border-radius:18px;box-shadow:0 16px 48px rgba(15,23,42,.14);max-height:340px;overflow-y:auto;z-index:50;padding:8px 0;display:none}
+.hh-loc-sugg{position:absolute;left:0;right:0;top:calc(100% + 10px);background:#fff;border:1.5px solid var(--border);border-radius:18px;box-shadow:0 16px 48px rgba(15,23,42,.14);max-height:260px;overflow-y:auto;z-index:120;padding:6px 0;display:none}
 .hh-loc-sugg.open{display:block}
-.hh-loc-sugg-item{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;font-size:14.5px;color:var(--ink);font-weight:500;transition:background .1s}
+.hh-loc-sugg-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;font-size:14.5px;color:var(--ink);font-weight:500;transition:background .1s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hh-loc-sugg-item>span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .hh-loc-sugg-item:hover,.hh-loc-sugg-item.hl{background:var(--redl);color:var(--red)}
 .hh-loc-sugg-ico{font-size:14px;color:var(--muted);flex-shrink:0}
 .hh-loc-sugg-item:hover .hh-loc-sugg-ico,.hh-loc-sugg-item.hl .hh-loc-sugg-ico{color:var(--red)}
@@ -223,16 +225,18 @@ img{display:block;max-width:100%}
 .hh-meta-row-text{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.1px}
 .hh-about-link{font-size:12.5px;color:var(--red);font-weight:700;background:var(--redl);border:1.5px solid rgba(37,99,235,.2);border-radius:100px;padding:5px 14px;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .hh-about-link:hover{background:var(--red);color:#fff;border-color:var(--red)}
+@media(max-width:900px){
+  .hh-searchbig{flex-wrap:wrap;padding:8px;border-radius:18px;gap:0;row-gap:2px}
+  .hh-searchbig-divider{display:none}
+  .hh-searchbig-kwwrap,.hh-searchbig-locwrap{flex:0 0 100%;width:100%;min-width:0}
+  .hh-searchbig-locwrap{border-top:1.5px solid var(--border);padding-top:2px;margin-top:2px}
+  .hh-searchbig-kwwrap .hh-searchbig-input,.hh-searchbig-locwrap .hh-searchbig-input{padding:14px 4px;font-size:15px;min-width:0}
+  .hh-searchbig-btn{flex:0 0 100%;width:100%;height:50px;margin-top:8px;border-radius:14px}
+}
 @media(max-width:700px){
   .hh-hero{padding:48px 5% 36px}
   .hh-hero-title{font-size:clamp(34px,9vw,46px)}
   .hh-hero-sub{font-size:15px;margin-bottom:28px}
-  .hh-searchbig{flex-wrap:wrap;padding:6px;border-radius:20px;gap:0;row-gap:2px}
-  .hh-searchbig-divider{display:none}
-  .hh-searchbig > .hh-searchbig-input{width:100%;padding:14px 10px;font-size:15px}
-  .hh-searchbig-locwrap{width:100%;border-top:1.5px solid var(--border);padding-top:2px;margin-top:2px}
-  .hh-searchbig-locwrap .hh-searchbig-input{padding:14px 4px;font-size:15px}
-  .hh-searchbig-btn{width:100%;height:50px;margin-top:8px;border-radius:14px}
   .hh-loc-sugg{left:-6px;right:-6px;top:calc(100% + 6px);border-radius:16px}
   .hh-pills-row{justify-content:flex-start;padding:0 4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
   .hh-pills-row::-webkit-scrollbar{display:none}
@@ -2222,27 +2226,42 @@ function doRegister() {
   if(pw !== pw2){ err('r-pw2','Passwords do not match.'); return; }
   if(!co){ err('r-company','Please enter your company or agency name.'); document.getElementById('r-company').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if(!terms){ showToast('⚠️ Please agree to the Terms of Service.','warn'); return; }
-  // DB + 메모리 둘 다 체크
   if(_ACCOUNTS[em]){ err('r-email','This email is already registered. Please sign in.'); return; }
+
+  var btn = document.querySelector('button[onclick="doRegister()"]');
+  var origLabel = btn ? btn.innerHTML : null;
+  function resetBtn(){ if(btn){ btn.disabled=false; btn.innerHTML=origLabel; } }
+  if(btn){ btn.disabled=true; btn.innerHTML='Creating account…'; }
 
   var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var td=new Date(); var ds=mn[td.getMonth()]+' '+td.getDate()+', '+td.getFullYear();
 
-  // DB 중복 체크 후 저장
-  dbGetAccount(em).then(function(existing){
-    if(existing){ err('r-email','This email is already registered. Please sign in.'); return; }
-    // 해시 먼저 생성 후 계정 저장 (await 필수 — credits API가 계정 인증 필요)
-    hashPw(pw).then(function(pwHash){
+  hashPw(pw).then(function(pwHash){
+    _apiCall('/api/auth-api', {action:'register', email:em, pw_hash:pwHash, name:name, company:co}).then(function(reg){
+      if(!reg || reg.error){
+        resetBtn();
+        var msg = (reg && reg.error) || '';
+        if(msg && msg.toLowerCase().indexOf('already') >= 0){
+          err('r-email','This email is already registered. Please sign in.');
+        } else if(msg === 'network' || reg && reg._http){
+          showToast('❌ Network error. Check your connection and try again.','error');
+        } else {
+          showToast('❌ ' + (msg || 'Registration failed. Please try again.'),'error');
+        }
+        return;
+      }
       _ACCOUNTS[em] = { pw: pwHash, name: name, company: co };
-      dbSaveAccount(em, pw, name, co).then(function(){
-        var promoCode = (document.getElementById('r-promo').value||'').trim().toUpperCase();
-        _doRegisterFinish(em, pwHash, name, co, ds, promoCode);
-      }).catch(function(e){
-        console.error('dbSaveAccount error:', e);
-        var promoCode = (document.getElementById('r-promo').value||'').trim().toUpperCase();
-        _doRegisterFinish(em, pwHash, name, co, ds, promoCode);
-      });
+      var promoCode = (document.getElementById('r-promo').value||'').trim().toUpperCase();
+      _doRegisterFinish(em, pwHash, name, co, ds, promoCode);
+    }).catch(function(e){
+      console.error('register error:', e);
+      resetBtn();
+      showToast('❌ Registration failed. Please try again.','error');
     });
+  }).catch(function(e){
+    console.error('hashPw error:', e);
+    resetBtn();
+    showToast('❌ Unable to process password. Please try again.','error');
   });
 }
 function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
@@ -6772,7 +6791,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <!-- ══════════════════════════════════════════════════ -->
 <div id="page-home" class="page">
   <!-- Banner -->
-  <div class="hh-banner"><span>🎉 Grand Opening — sign up today and get <strong>5 free</strong> posting credits</span></div>
+  <div class="hh-banner"><span>🎉 Grand Opening — sign up, get <strong>5 free</strong> posting credits</span></div>
 
   <!-- Youth Hero -->
   <section class="hh-hero">
@@ -6786,9 +6805,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
       <!-- Big Search -->
       <div class="hh-searchbig" role="search">
-        <span class="hh-searchbig-ico">🔍</span>
-        <input type="text" id="s-kw" class="hh-searchbig-input" placeholder="Job title, skill, or company" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" name="search-x" aria-label="Keyword" oninput="var c=document.getElementById('kw-clear');if(c)c.style.display=this.value?'inline-flex':'none';" onkeydown="if(event.key==='Enter')doSearch()">
-        <button id="kw-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-kw').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
+        <div class="hh-searchbig-kwwrap">
+          <span class="hh-searchbig-ico">🔍</span>
+          <input type="text" id="s-kw" class="hh-searchbig-input" placeholder="Job title, skill, or company" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" name="search-x" aria-label="Keyword" oninput="var c=document.getElementById('kw-clear');if(c)c.style.display=this.value?'inline-flex':'none';" onkeydown="if(event.key==='Enter')doSearch()">
+          <button id="kw-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-kw').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
+        </div>
         <div class="hh-searchbig-divider"></div>
         <div class="hh-searchbig-locwrap">
           <span class="hh-searchbig-ico">📍</span>
@@ -6963,7 +6984,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <input type="hidden" id="r-size" value="1-4">
     <input type="hidden" id="r-industry" value="Other">
 
-    <label class="legal-check" style="margin-top:12px"><input type="checkbox" id="r-terms"> I agree to the <a onclick="go('terms')">Terms of Service</a> and <a onclick="go('privacy')">Privacy Policy</a>. Data stored in Canada.</label>
+    <label class="legal-check" style="margin-top:12px"><input type="checkbox" id="r-terms"><span>I agree to the <a onclick="go('terms')">Terms of Service</a> and <a onclick="go('privacy')">Privacy Policy</a>. Data stored in Canada.</span></label>
 
     <div style="background:var(--greenl);border:1px solid #B8DCC7;border-radius:var(--r);padding:12px 14px;font-size:12.5px;color:var(--greend);line-height:1.6;margin:16px 0">🍁 By creating your account, you confirm compliance with the <strong>Canadian Human Rights Act</strong> and applicable employment standards legislation.</div>
     <button class="btn btn-primary btn-full btn-lg" onclick="doRegister()">Create Account &amp; Post Jobs →</button>
