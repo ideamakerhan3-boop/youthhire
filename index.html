@@ -164,6 +164,54 @@ img{display:block;max-width:100%}
 .hero-pill.active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.4)}
 .hero-pill:hover{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.28)}
 
+/* ═══ HH HERO V2 (light, big, Indeed-style for youth) ═══ */
+.hh-banner{background:linear-gradient(90deg,#065F46,#047857);color:#fff;padding:11px 4%;text-align:center;font-size:13px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.hh-banner strong{color:#FFE27A;font-weight:800}
+.hh-hero{background:linear-gradient(180deg,#F2F6FF 0%,#FFFFFF 100%);padding:72px 5% 56px;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.hh-hero::before{content:"";position:absolute;top:-180px;right:-160px;width:520px;height:520px;background:radial-gradient(circle,rgba(37,99,235,.1) 0%,transparent 70%);border-radius:50%;pointer-events:none}
+.hh-hero::after{content:"";position:absolute;bottom:-120px;left:-120px;width:380px;height:380px;background:radial-gradient(circle,rgba(255,195,85,.18) 0%,transparent 70%);border-radius:50%;pointer-events:none}
+.hh-hero-inner{max-width:860px;margin:0 auto;text-align:center;position:relative;z-index:1}
+.hh-hero-eyebrow{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--border);color:var(--ink);font-size:12px;font-weight:700;padding:7px 14px;border-radius:100px;margin-bottom:24px;box-shadow:0 1px 3px rgba(15,23,42,.04);letter-spacing:.2px}
+.hh-hero-eyebrow-dot{width:6px;height:6px;background:#10B981;border-radius:50%;box-shadow:0 0 0 3px rgba(16,185,129,.2);animation:pulse 2s ease infinite}
+.hh-hero-title{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:clamp(38px,6.5vw,72px);font-weight:800;line-height:1.02;letter-spacing:-.035em;color:var(--ink);margin-bottom:20px}
+.hh-hero-title em{font-style:normal;color:var(--red);position:relative;white-space:nowrap}
+.hh-hero-title em::after{content:"";position:absolute;left:0;right:0;bottom:4px;height:14px;background:#FEE440;z-index:-1;border-radius:4px}
+.hh-hero-sub{font-size:clamp(15px,1.8vw,19px);color:var(--gray);line-height:1.55;max-width:580px;margin:0 auto 36px;font-weight:500}
+.hh-searchbig{max-width:720px;margin:0 auto 28px;background:#fff;border:2px solid #E5E7EB;border-radius:20px;box-shadow:0 12px 40px rgba(15,23,42,.08);display:flex;align-items:center;padding:8px;gap:4px;transition:all .18s}
+.hh-searchbig:focus-within{border-color:var(--red);box-shadow:0 16px 48px rgba(37,99,235,.18)}
+.hh-searchbig-ico{font-size:17px;padding:0 6px 0 14px;color:var(--muted);flex-shrink:0;line-height:1}
+.hh-searchbig-input{flex:1;border:none;outline:none;font-size:16px;font-weight:500;color:var(--ink);background:transparent;min-width:0;padding:16px 4px;font-family:inherit}
+.hh-searchbig-input::placeholder{color:#9CA3AF;font-weight:500}
+.hh-searchbig-divider{width:1.5px;height:28px;background:var(--border);flex-shrink:0;margin:0 4px}
+.hh-searchbig-select{border:none;outline:none;font-size:15px;font-weight:600;color:var(--ink);background:transparent;appearance:none;-webkit-appearance:none;padding:16px 32px 16px 4px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;cursor:pointer;min-width:140px;font-family:inherit}
+.hh-searchbig-btn{background:var(--red);color:#fff;border:none;padding:0 28px;height:54px;border-radius:14px;font-size:15.5px;font-weight:700;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:-.01em;font-family:inherit}
+.hh-searchbig-btn:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,235,.3)}
+.hh-searchbig-clear{background:none;border:none;color:#9CA3AF;font-size:17px;padding:0 6px;cursor:pointer;flex-shrink:0}
+.hh-searchbig-clear:hover{color:var(--ink)}
+.hh-pills-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;max-width:780px;margin:0 auto 18px}
+.hh-pills-label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-right:6px}
+.hh-pill{display:inline-flex!important;align-items:center;gap:6px;background:#fff!important;border:1.5px solid var(--border)!important;color:var(--ink)!important;padding:10px 16px!important;border-radius:100px!important;font-size:14px!important;font-weight:600!important;cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:-.01em!important;box-shadow:none!important}
+.hh-pill:hover{border-color:var(--red)!important;color:var(--red)!important;background:var(--redl)!important;transform:translateY(-1px)}
+.hh-pill.active{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important;box-shadow:0 6px 16px rgba(37,99,235,.3)!important}
+.hh-meta-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:22px;border-top:1px solid rgba(15,23,42,.06);margin-top:22px}
+.hh-meta-row-text{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.1px}
+.hh-about-link{font-size:12.5px;color:var(--red);font-weight:700;background:var(--redl);border:1.5px solid rgba(37,99,235,.2);border-radius:100px;padding:5px 14px;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.hh-about-link:hover{background:var(--red);color:#fff;border-color:var(--red)}
+@media(max-width:700px){
+  .hh-hero{padding:48px 5% 36px}
+  .hh-hero-title{font-size:clamp(34px,9vw,46px)}
+  .hh-hero-sub{font-size:15px;margin-bottom:28px}
+  .hh-searchbig{flex-wrap:wrap;padding:6px;border-radius:18px}
+  .hh-searchbig-divider{display:none}
+  .hh-searchbig-input{width:100%;padding:14px 8px}
+  .hh-searchbig-select{width:100%;padding:14px 32px 14px 14px;border-top:1.5px solid var(--border);border-radius:0;margin-top:2px}
+  .hh-searchbig-btn{width:100%;height:52px;margin-top:6px;border-radius:12px}
+  .hh-pills-row{justify-content:flex-start;padding:0 4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+  .hh-pills-row::-webkit-scrollbar{display:none}
+  .hh-pills-label{display:none}
+  .hh-pill{flex-shrink:0;font-size:13.5px!important;padding:9px 14px!important}
+}
+
 /* ═══ INCLUSION BANNER ═══ */
 .incl-bar{background:var(--ink);border-top:1px solid rgba(255,255,255,.06);padding:16px 5%}
 .incl-bar-inner{display:flex;gap:12px;flex-wrap:wrap;max-width:1100px;margin:0 auto}
@@ -172,7 +220,7 @@ img{display:block;max-width:100%}
 .incl-pill-text{font-size:12px;font-weight:700;color:rgba(255,255,255,.65)}
 
 /* ═══ JOB LIST LAYOUT ═══ */
-.jobs-layout{max-width:1060px;margin:0 auto;padding:32px 4%;display:flex;gap:24px;align-items:flex-start}
+.jobs-layout{max-width:1080px;margin:0 auto;padding:48px 4% 72px;display:flex;gap:28px;align-items:flex-start}
 .jobs-sidebar{width:220px;flex-shrink:0;position:sticky;top:calc(var(--nav-h) + 16px)}
 .jobs-main{flex:1;min-width:0}
 .filter-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:12px}
@@ -185,13 +233,13 @@ img{display:block;max-width:100%}
 
 /* ═══ JOB LIST ═══ */
 .list-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
-.list-bar h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.list-bar h2{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:26px;font-weight:800;letter-spacing:-.03em}
 .list-meta{display:flex;align-items:center;gap:10px}
 .cnt-badge{background:var(--bg);border:1.5px solid var(--border);border-radius:100px;font-size:12px;font-weight:700;padding:4px 12px;color:var(--gray)}
 .sort-sel{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--gray);background:var(--white);cursor:pointer;outline:none;-webkit-appearance:auto;appearance:auto}
 .jlist{display:flex;flex-direction:column;gap:8px}
-.jcard{background:#fff;border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 18px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
-.jcard:hover{border-color:var(--border2);box-shadow:var(--sh);transform:translateY(-1px)}
+.jcard{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:22px 24px;display:flex;align-items:flex-start;gap:16px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.jcard:hover{border-color:var(--red);box-shadow:0 8px 24px rgba(37,99,235,.08);transform:translateY(-2px)}
 .jcard:focus-visible{outline:3px solid var(--blue);outline-offset:0}
 .jcard.featured{border-color:#F5C842;background:linear-gradient(135deg,#FFFEF5 0%,#fff 60%)}
 .jcard.jcard-closed{opacity:.55;pointer-events:auto}
@@ -201,12 +249,12 @@ img{display:block;max-width:100%}
 .jcard.featured::before{content:'Featured';position:absolute;top:0;right:0;background:#F5C842;color:#6B4A00;font-size:9px;font-weight:800;padding:3px 10px;border-radius:0 0 0 8px;letter-spacing:.5px}
 .jcard.jobbank{border-left:3px solid var(--blue)}
 .jcard.closed{opacity:.5;pointer-events:none}
-.j-logo{width:44px;height:44px;border-radius:10px;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
+.j-logo{width:54px;height:54px;border-radius:12px;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden}
 .j-body{flex:1;min-width:0}
-.j-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;max-width:100%}
-.j-company{font-size:12.5px;color:var(--gray);font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.j-title{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.015em;max-width:100%}
+.j-company{font-size:13.5px;color:var(--gray);font-weight:500;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .j-tags{display:flex;gap:5px;flex-wrap:wrap}
-.j-tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:100px;background:var(--bg);color:var(--gray);border:1px solid var(--border);white-space:nowrap}
+.j-tag{font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;background:var(--bg);color:var(--gray);border:1px solid var(--border);white-space:nowrap}
 .j-tag-green{background:var(--greenl);color:var(--green);border-color:#B8DCC7}
 .j-tag-amber{background:var(--amberl);color:var(--amber);border-color:#F0D5A0}
 .j-tag-blue{background:var(--bluel);color:var(--blue);border-color:#C2D5F5}
@@ -6595,68 +6643,62 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <!--  HOME PAGE                                        -->
 <!-- ══════════════════════════════════════════════════ -->
 <div id="page-home" class="page">
-  <!-- Coming Soon Banner -->
-  <div style="background:linear-gradient(90deg,#065F46,#047857);padding:10px 4%;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap"><span style="font-size:15px"></span><span style="color:#fff;font-size:13px;font-weight:700;letter-spacing:.2px">Grand Opening! Sign up today and get <em style="font-style:normal;color:#FFC355">5 FREE</em> job posting credits — limited time offer!</span><span style="font-size:15px">🎉</span></div>
-  <!-- Search Header — dark band, NOT sticky (prevents double scroll) -->
-  <div style="background:var(--ink2);padding:20px 4% 16px;border-bottom:2px solid rgba(255,255,255,.06)">
-    <div style="max-width:1060px;margin:0 auto">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        <div style="font-family:'Playfair Display',serif;font-size:clamp(18px,2.6vw,24px);font-weight:900;color:#fff;letter-spacing:-.02em;flex-shrink:0">🍁 Jobs in <span style="color:#FFC355">Canada</span></div>
-        <div style="flex:1;min-width:240px">
-          <div class="search-bar" role="search" style="height:46px;max-width:580px">
-            <span class="search-bar-icon" style="font-size:15px">🔍</span>
-            <input type="text" id="s-kw" placeholder="Title, keyword, company…" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" name="search-x" aria-label="Keyword" oninput="var c=document.getElementById('kw-clear');if(c)c.style.display=this.value?'flex':'none';" onkeydown="if(event.key==='Enter')doSearch()" style="font-size:13px">
-            <div class="search-bar-divider" id="prov-divider"></div>
-            <select id="s-prov" aria-label="Province" onchange="this.style.outline=this.value?'2px solid #F5C842':'none';doSearch()" style="font-size:12.5px;min-width:100px;max-width:160px">
-              <option value="">All Canada</option>
-              <option value="British Columbia">BC — British Columbia</option>
-              <option value="Alberta">AB — Alberta</option>
-              <option value="Saskatchewan">SK — Saskatchewan</option>
-              <option value="Manitoba">MB — Manitoba</option>
-              <option value="Ontario">ON — Ontario</option>
-              <option value="Quebec">QC — Québec</option>
-              <option value="New Brunswick">NB — New Brunswick</option>
-              <option value="Nova Scotia">NS — Nova Scotia</option>
-              <option value="PEI">PEI</option>
-              <option value="Newfoundland">NL — Newfoundland</option>
-            </select>
-            <button id="kw-clear" onclick="document.getElementById('s-kw').value='';document.getElementById('kw-clear').style.display='none';doSearch()" style="display:none;background:none;border:none;color:#999;font-size:18px;padding:0 8px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0">✕</button><button class="search-go" onclick="doSearch()" style="padding:0 16px;font-size:13px">Search</button>
-          </div>
-          <!-- 모바일에서 province select를 아래 별도 행으로 -->
-          <div id="mob-prov-row" style="display:none;margin-top:8px;max-width:580px">
-            <select id="s-prov-mob" aria-label="Province" onchange="document.getElementById('s-prov').value=this.value;this.style.borderColor=this.value?'#F5C842':'rgba(255,255,255,.15)';doSearch()" style="width:100%;height:46px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:13.5px;font-weight:600;padding:0 14px;font-family:inherit;appearance:auto">
-              <option value="" style="background:#1a1a2e;color:#fff">📍 All Canada</option>
-              <option value="British Columbia" style="background:#1a1a2e;color:#fff">BC — British Columbia</option>
-              <option value="Alberta" style="background:#1a1a2e;color:#fff">AB — Alberta</option>
-              <option value="Saskatchewan" style="background:#1a1a2e;color:#fff">SK — Saskatchewan</option>
-              <option value="Manitoba" style="background:#1a1a2e;color:#fff">MB — Manitoba</option>
-              <option value="Ontario" style="background:#1a1a2e;color:#fff">ON — Ontario</option>
-              <option value="Quebec" style="background:#1a1a2e;color:#fff">QC — Québec</option>
-              <option value="New Brunswick" style="background:#1a1a2e;color:#fff">NB — New Brunswick</option>
-              <option value="Nova Scotia" style="background:#1a1a2e;color:#fff">NS — Nova Scotia</option>
-              <option value="PEI" style="background:#1a1a2e;color:#fff">PEI</option>
-              <option value="Newfoundland" style="background:#1a1a2e;color:#fff">NL — Newfoundland</option>
-            </select>
-          </div>
-        </div>
+  <!-- Banner -->
+  <div class="hh-banner">🎉 <span>Grand Opening! Sign up today and get <strong>5 FREE</strong> job posting credits</span></div>
 
+  <!-- Youth Hero -->
+  <section class="hh-hero">
+    <div class="hh-hero-inner">
+      <div class="hh-hero-eyebrow">
+        <span class="hh-hero-eyebrow-dot"></span>
+        <span>Youth jobs across Canada</span>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="hero-pill" data-cat="Hospitality & Tourism" onclick="togglePill(this)">🏨 Hospitality</button>
-        <button class="hero-pill" data-cat="Food Services" onclick="togglePill(this)">🍳 Kitchen</button>
-        <button class="hero-pill" data-cat="Health Care" onclick="togglePill(this)">🏥 Health</button>
-        <button class="hero-pill" data-cat="Construction" onclick="togglePill(this)">🔨 Construction</button>
-        <button class="hero-pill" data-cat="Transportation & Logistics" onclick="togglePill(this)">🚚 Driver</button>
-        <button class="hero-pill" data-cat="Child Care" onclick="togglePill(this)">👶 Child Care</button>
-        <button class="hero-pill" data-cat="Technology" onclick="togglePill(this)">💻 Tech</button>
-        <span id="home-stats-bar" style="font-size:11px;color:rgba(255,255,255,.3);margin-left:4px"></span>
+      <h1 class="hh-hero-title">Your first job,<br>starts <em>here</em>.</h1>
+      <p class="hh-hero-sub">Student-friendly, part-time, and entry-level roles — built for the next generation of Canadian workers.</p>
+
+      <!-- Big Search -->
+      <div class="hh-searchbig" role="search">
+        <span class="hh-searchbig-ico">🔍</span>
+        <input type="text" id="s-kw" class="hh-searchbig-input" placeholder="Job title, skill, or company" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" name="search-x" aria-label="Keyword" oninput="var c=document.getElementById('kw-clear');if(c)c.style.display=this.value?'inline-flex':'none';" onkeydown="if(event.key==='Enter')doSearch()">
+        <button id="kw-clear" class="hh-searchbig-clear" onclick="document.getElementById('s-kw').value='';this.style.display='none';doSearch()" style="display:none">✕</button>
+        <div class="hh-searchbig-divider"></div>
+        <span class="hh-searchbig-ico">📍</span>
+        <select id="s-prov" class="hh-searchbig-select" aria-label="Province" onchange="doSearch()">
+          <option value="">All Canada</option>
+          <option value="British Columbia">British Columbia</option>
+          <option value="Alberta">Alberta</option>
+          <option value="Saskatchewan">Saskatchewan</option>
+          <option value="Manitoba">Manitoba</option>
+          <option value="Ontario">Ontario</option>
+          <option value="Quebec">Québec</option>
+          <option value="New Brunswick">New Brunswick</option>
+          <option value="Nova Scotia">Nova Scotia</option>
+          <option value="PEI">PEI</option>
+          <option value="Newfoundland">Newfoundland</option>
+        </select>
+        <button class="hh-searchbig-btn" onclick="doSearch()">Search</button>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);align-items:center">
-        <span style="font-size:11px;color:rgba(255,255,255,.4);font-weight:600;letter-spacing:.3px">Students · New Grads · Part-Time · LMIA-Ready Recruitment</span>
-        <button onclick="go('about')" style="font-size:11px;color:#FFC355;font-weight:700;background:none;border:1px solid rgba(255,195,85,.3);border-radius:100px;padding:3px 12px;cursor:pointer;letter-spacing:.3px;transition:all .15s;font-family:inherit" onmouseover="this.style.background='rgba(255,195,85,.12)'" onmouseout="this.style.background='none'">About This Site →</button>
+
+      <!-- Pills -->
+      <div class="hh-pills-row">
+        <span class="hh-pills-label">Popular</span>
+        <button class="hero-pill hh-pill" data-cat="Hospitality & Tourism" onclick="togglePill(this)">🏨 Hospitality</button>
+        <button class="hero-pill hh-pill" data-cat="Food Services" onclick="togglePill(this)">🍳 Kitchen</button>
+        <button class="hero-pill hh-pill" data-cat="Health Care" onclick="togglePill(this)">🏥 Health</button>
+        <button class="hero-pill hh-pill" data-cat="Construction" onclick="togglePill(this)">🔨 Construction</button>
+        <button class="hero-pill hh-pill" data-cat="Transportation & Logistics" onclick="togglePill(this)">🚚 Driver</button>
+        <button class="hero-pill hh-pill" data-cat="Child Care" onclick="togglePill(this)">👶 Child Care</button>
+        <button class="hero-pill hh-pill" data-cat="Technology" onclick="togglePill(this)">💻 Tech</button>
       </div>
+
+      <!-- Meta -->
+      <div class="hh-meta-row">
+        <span class="hh-meta-row-text">Students · New Grads · Part-Time · LMIA-Ready</span>
+        <button onclick="go('about')" class="hh-about-link">About This Site →</button>
+      </div>
+      <span id="home-stats-bar" style="display:none"></span>
     </div>
-  </div>
+  </section>
 
 
   <div class="jobs-layout">
