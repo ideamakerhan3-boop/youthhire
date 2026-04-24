@@ -21,20 +21,22 @@ export default function middleware(req) {
     return;
   }
 
-  const USER = process.env.STAGING_USER || 'ideamakerhan';
-  const PASS = process.env.STAGING_PASS || 'gks125412';
+  const USER = process.env.STAGING_USER;
+  const PASS = process.env.STAGING_PASS;
 
-  const auth = req.headers.get('authorization') || '';
-  if (auth.startsWith('Basic ')) {
-    try {
-      const decoded = atob(auth.slice(6));
-      const idx = decoded.indexOf(':');
-      const u = decoded.slice(0, idx);
-      const p = decoded.slice(idx + 1);
-      if (u === USER && p === PASS) {
-        return; // allow through
-      }
-    } catch (_) {}
+  if (USER && PASS) {
+    const auth = req.headers.get('authorization') || '';
+    if (auth.startsWith('Basic ')) {
+      try {
+        const decoded = atob(auth.slice(6));
+        const idx = decoded.indexOf(':');
+        const u = decoded.slice(0, idx);
+        const p = decoded.slice(idx + 1);
+        if (u === USER && p === PASS) {
+          return; // allow through
+        }
+      } catch (_) {}
+    }
   }
 
   return new Response('Authentication required', {
