@@ -6511,7 +6511,7 @@ function autoExpireJobs() {
 //
 // apply_email is intentionally NOT returned in the list payload to avoid
 // bulk email harvesting. Jobs with applyMethod=email get `_needsDetail:true`
-// and openJob() hydrates them via /api/job-detail on click.
+// and openJob() hydrates them via /api/list-jobs?id=X on click.
 async function loadPublicJobs() {
   try {
     var r = await fetch('/api/list-jobs?limit=200', { method: 'GET', headers: { 'Accept': 'application/json' } });
@@ -6558,7 +6558,7 @@ async function loadPublicJobs() {
 async function hydrateJobDetail(j) {
   if (!j || !j._needsDetail || !j.id) return;
   try {
-    var r = await fetch('/api/job-detail?id=' + encodeURIComponent(j.id), { method: 'GET', headers: { 'Accept': 'application/json' } });
+    var r = await fetch('/api/list-jobs?id=' + encodeURIComponent(j.id), { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) { j._needsDetail = false; return; }
     var d = await r.json().catch(function(){ return null; });
     if (d && d.job) {
