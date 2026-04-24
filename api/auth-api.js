@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { rateLimit } from './_lib/ratelimit.js';
+import { verifyTurnstile } from './_lib/turnstile.js';
 
 // Service key bypasses RLS — all sensitive account/job operations go through here.
 const sb = createClient(
@@ -75,6 +76,14 @@ export default async function handler(req, res) {
       if (body.website || body.url || body.homepage || body.phone_number) {
         console.warn('honeypot tripped from IP', ip);
         return res.status(200).json({ ok: true, email: 'silent@honeypot', name: '', company: '', is_admin: false });
+      }
+      // Turnstile CAPTCHA: when client sends turnstile_token, verify with Cloudflare.
+      // Backwards-compatible: if client hasn't been updated yet (no token), the
+      // helper returns true when TURNSTILE_SECRET_KEY is set but token missing
+      // we fail closed. Client-side integration comes in a separate pass.
+      if (body.turnstile_token !== undefined) {
+        const ok = await verifyTurnstile(body.turnstile_token, ip);
+        if (!ok) return res.status(403).json({ error: 'Bot check failed. Please refresh and try again.' });
       }
       const { email, pw_hash, name, company } = body;
       if (!email || !pw_hash) return res.status(400).json({ error: 'email and pw_hash required' });
