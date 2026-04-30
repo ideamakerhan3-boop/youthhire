@@ -23,6 +23,10 @@ export async function sendTransactionalEmail({ template_id, template_params }) {
     return false;
   }
 
+  // Cap the EmailJS call so a slow EmailJS upstream doesn't burn our 10s
+  // function-timeout budget (saw 504s in production when EmailJS hung >10s).
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
   try {
     const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -34,19 +38,23 @@ export async function sendTransactionalEmail({ template_id, template_params }) {
         accessToken: privateKey,
         template_params,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
-      // Log on multiple lines so Vercel's table view doesn't truncate the
-      // body to "The …" — split into status line + body line + meta line.
-      console.error('email: send failed status=' + resp.status);
-      console.error('email: response body=' + (body || '').substring(0, 500).replace(/\s+/g, ' '));
-      console.error('email: meta tmpl=' + tmpl + ' service=' + serviceId + ' to=' + template_params.to_email);
+      // Combine status + body + meta into ONE console.error call. Vercel's log
+      // table view shows the first stderr line per request; multiple errors
+      // get collapsed. Single-line keeps the rejection reason visible.
+      const flat = (body || '').substring(0, 400).replace(/\s+/g, ' ');
+      console.error('[EMAILJS_FAIL] status=' + resp.status + ' tmpl=' + tmpl + ' to=' + template_params.to_email + ' body=' + flat);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('email: fetch error', e.message);
+    clearTimeout(timeoutId);
+    const reason = e.name === 'AbortError' ? 'timeout_6s' : (e.message || 'unknown');
+    console.error('[EMAILJS_FAIL] fetch_error=' + reason + ' tmpl=' + tmpl + ' to=' + template_params.to_email);
     return false;
   }
 }
