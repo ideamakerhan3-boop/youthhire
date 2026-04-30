@@ -4239,43 +4239,50 @@ function _initApp() {
         dbGetCredits(savedEmail).then(function(cr){
           if(cr && cr.total >= 0){ _totalCredits = cr.total; _usedCredits = cr.used; syncCredits(); }
         });
-        // DB에서 공고 불러오기
+        // DB에서 공고 불러오기 (본인 소유 — list_own_jobs는 service key로 모든 컬럼 포함)
         dbGetJobs(savedEmail).then(function(dbJobs){
-          var _dbj = dbJobs||[]; if(true){var dbJobs=_dbj;
-            dbJobs.forEach(function(dj){
-              var exists = JOBS.some(function(j){ return String(j.id)===String(dj.job_id); });
-              if(!exists){
-                var job = {
-                  id: dj.job_id, title: dj.title, company: dj.company,
-                  loc: dj.loc||'', prov: dj.prov||'', type: dj.type||'Full-Time',
-                  cat: dj.category||'Other', desc: dj.description||'',
-                  status: dj.status||'active',
-                  date: dj.posted_date||'', exp: dj.exp_date||'',
-                  postedByEmail: dj.email, src: 'local',
-                  salary: dj.wage||'', salaryNum: 0, icon: CAT_ICONS[dj.category]||'💼',
-                  bizCity: dj.biz_city || (dj.loc ? dj.loc.split(',')[0].trim() : ''),
-                  bizProv: dj.biz_prov || dj.prov||'',
-                  applyMethod: dj.apply_method||'email',
-                  // Bug 13: do NOT fall back to dj.email (poster account) or savedEmail.
-                  // apply_email must come ONLY from what the employer typed for applicants.
-                  email: dj.apply_method==='url' ? '' : (dj.apply_email||''),
-                  applyUrl: dj.apply_method==='url' ? (dj.apply_url||'') : '',
-                  lang: dj.lang||'English', edu: dj.edu||'None',
-                  expReq: dj.exp_req||'No experience', vacancy: dj.vacancy||'new',
-                  ai: dj.ai_use||'no', remote: dj.remote||'onsite',
-                  req: dj.requirements ? dj.requirements.split('\n').filter(Boolean) : [],
-                  ben: dj.benefits ? dj.benefits.split('\n').filter(Boolean) : [],
-                  statusLog: [], url: null,
-                  postedByAccCompany: dj.posted_by_acc_company || savedCompany
-                };
-                JOBS.push(job);
+          (dbJobs||[]).forEach(function(dj){
+            var existing = JOBS.find(function(j){ return String(j.id)===String(dj.job_id); });
+            if(existing){
+              // Already added by loadPublicJobs (public endpoint strips owner fields).
+              // Merge in owner-only fields so the dashboard filter (postedByEmail) matches
+              // and apply_email is no longer hydrated lazily for the employer's own jobs.
+              existing.postedByEmail = dj.email || existing.postedByEmail;
+              existing.postedByAccCompany = dj.posted_by_acc_company || existing.postedByAccCompany || savedCompany;
+              if (dj.apply_method === 'email' && dj.apply_email) {
+                existing.email = dj.apply_email;
+                existing._needsDetail = false;
               }
+              return;
+            }
+            JOBS.push({
+              id: dj.job_id, title: dj.title, company: dj.company,
+              loc: dj.loc||'', prov: dj.prov||'', type: dj.type||'Full-Time',
+              cat: dj.category||'Other', desc: dj.description||'',
+              status: dj.status||'active',
+              date: dj.posted_date||'', exp: dj.exp_date||'',
+              postedByEmail: dj.email, src: 'local',
+              salary: dj.wage||'', salaryNum: 0, icon: CAT_ICONS[dj.category]||'💼',
+              bizCity: dj.biz_city || (dj.loc ? dj.loc.split(',')[0].trim() : ''),
+              bizProv: dj.biz_prov || dj.prov||'',
+              applyMethod: dj.apply_method||'email',
+              // Bug 13: do NOT fall back to dj.email (poster account) or savedEmail.
+              // apply_email must come ONLY from what the employer typed for applicants.
+              email: dj.apply_method==='url' ? '' : (dj.apply_email||''),
+              applyUrl: dj.apply_method==='url' ? (dj.apply_url||'') : '',
+              lang: dj.lang||'English', edu: dj.edu||'None',
+              expReq: dj.exp_req||'No experience', vacancy: dj.vacancy||'new',
+              ai: dj.ai_use||'no', remote: dj.remote||'onsite',
+              req: dj.requirements ? dj.requirements.split('\n').filter(Boolean) : [],
+              ben: dj.benefits ? dj.benefits.split('\n').filter(Boolean) : [],
+              statusLog: [], url: null,
+              postedByAccCompany: dj.posted_by_acc_company || savedCompany
             });
-            ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
-            loadDashForEmail(savedEmail);
-            // (Issue-job auto-flagging moved to /admin — public app no longer surfaces it)
-            try{ doSearch(); renderDash(); updateDashStats(); }catch(e){}
-          }
+          });
+          ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
+          loadDashForEmail(savedEmail);
+          // (Issue-job auto-flagging moved to /admin — public app no longer surfaces it)
+          try{ doSearch(); renderDash(); updateDashStats(); }catch(e){}
         });
         _restoreCreditsForEmail(savedEmail);
         // Stripe에서 돌아온 경우 대시보드로 이동
