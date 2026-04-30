@@ -173,6 +173,99 @@ export default async function handler(req, res) {
       });
     }
 
+    // ──────────────── REQUEST_RESET (no auth) — generate token, email link ────────────────
+    if (action === 'request_reset') {
+      const rawEmail = body.email;
+      if (!rawEmail || typeof rawEmail !== 'string') return res.status(400).json({ error: 'email required' });
+      const em = rawEmail.toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) || em.length > 254) {
+        return res.status(400).json({ error: 'invalid email' });
+      }
+      // Rate limits: stricter than login because compromised reset = takeover.
+      // 3 per email/hour blunts targeted harassment; 5 per IP/hour blunts enumeration sweeps.
+      if (!(await rateLimit(sb, 'reset_email:' + em, 3, 3600_000))) {
+        return res.status(429).json({ error: 'Too many reset requests for this email. Try again in an hour.' });
+      }
+      if (!(await rateLimit(sb, 'reset_ip:' + ip, 5, 3600_000))) {
+        return res.status(429).json({ error: 'Too many reset requests. Try again in an hour.' });
+      }
+
+      // Always return a generic success regardless of whether the email matches an
+      // account (prevents enumeration). Only do the work if the account exists.
+      const { data: acct } = await sb.from('accounts').select('email, name, status').eq('email', em).maybeSingle();
+      if (acct && acct.status !== 'suspended') {
+        try {
+          const crypto = await import('node:crypto');
+          const token = crypto.randomBytes(32).toString('hex'); // 64-char URL-safe
+          const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+          const expiresAt = new Date(Date.now() + 3600_000).toISOString(); // 1h
+          await sb.from('accounts').update({
+            reset_token_hash: tokenHash,
+            reset_token_expires_at: expiresAt,
+          }).eq('email', acct.email);
+
+          const resetUrl = 'https://www.canadayouthhire.ca/reset?token=' + token;
+          const { sendTransactionalEmail } = await import('./_lib/email.js');
+          await sendTransactionalEmail({
+            template_id: process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome',
+            template_params: {
+              to_email: acct.email,
+              to_name: acct.name || acct.email,
+              subject: 'Reset your YouthHire password',
+              heading: 'Password Reset Requested',
+              message:
+                'Click the link below to choose a new password. The link expires in 1 hour.\n\n' +
+                resetUrl + '\n\n' +
+                'If you did not request this, you can safely ignore this email — your password will not change.',
+              button_text: 'Reset Password',
+            },
+          });
+        } catch (e) {
+          // Log but do not surface — generic success keeps email enumeration shut.
+          console.error('request_reset internal error:', e.message);
+        }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // ──────────────── VERIFY_RESET (token-based, sets new password) ────────────────
+    if (action === 'verify_reset') {
+      const { token, new_pw_hash } = body;
+      if (!token || typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) {
+        return res.status(400).json({ error: 'invalid token' });
+      }
+      if (!new_pw_hash || !/^[a-f0-9]{64}$/.test(new_pw_hash)) {
+        return res.status(400).json({ error: 'invalid new password' });
+      }
+      // Rate limit per IP — slows offline-style token guessing if anything leaks.
+      if (!(await rateLimit(sb, 'reset_verify:' + ip, 10, 3600_000))) {
+        return res.status(429).json({ error: 'Too many attempts. Try again in an hour.' });
+      }
+      const crypto = await import('node:crypto');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const { data: acct } = await sb.from('accounts')
+        .select('email, reset_token_hash, reset_token_expires_at, status')
+        .eq('reset_token_hash', tokenHash)
+        .maybeSingle();
+      if (!acct) return res.status(403).json({ error: 'Invalid or expired reset link' });
+      if (!acct.reset_token_expires_at || new Date(acct.reset_token_expires_at) < new Date()) {
+        return res.status(403).json({ error: 'Reset link expired. Please request a new one.' });
+      }
+      if (acct.status === 'suspended') return res.status(403).json({ error: 'Account suspended' });
+
+      const newHashed = await bcrypt.hash(new_pw_hash, BCRYPT_ROUNDS);
+      const { error: updErr } = await sb.from('accounts').update({
+        pw: newHashed,
+        reset_token_hash: null,
+        reset_token_expires_at: null,
+      }).eq('email', acct.email);
+      if (updErr) {
+        console.error('verify_reset update error:', updErr.message);
+        return res.status(500).json({ error: 'Could not update password. Try again.' });
+      }
+      return res.status(200).json({ ok: true, email: acct.email });
+    }
+
     // ──────────────── All below require auth ────────────────
     const { email, pw_hash } = body;
     const acct = await verifyAuth(email, pw_hash);

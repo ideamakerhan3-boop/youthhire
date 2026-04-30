@@ -1283,6 +1283,27 @@ function go(p, skipHistory) {
     window.location.href = '/admin';
     return;
   }
+  if (p==='forgot') {
+    // Reset to the form view in case user is returning after a successful submit.
+    var f1 = document.getElementById('forgot-form-wrap');
+    var s1 = document.getElementById('forgot-success-wrap');
+    if(f1) f1.style.display='';
+    if(s1) s1.style.display='none';
+    var btn1 = document.getElementById('fg-submit-btn');
+    if(btn1){ btn1.disabled=false; btn1.textContent='Send Reset Link'; }
+    var em1 = document.getElementById('fg-email'); if(em1) em1.value = '';
+  }
+  if (p==='reset') {
+    // Validate token presence; show invalid pane immediately if missing/malformed.
+    var fw = document.getElementById('reset-form-wrap');
+    var iw = document.getElementById('reset-invalid-wrap');
+    var hasToken = !!_resetTokenFromUrl();
+    if(fw) fw.style.display = hasToken ? '' : 'none';
+    if(iw) iw.style.display = hasToken ? 'none' : '';
+    var btn2 = document.getElementById('rs-submit-btn');
+    if(btn2){ btn2.disabled=false; btn2.textContent='Set New Password'; }
+    ['rs-pw','rs-pw2'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  }
   if (p==='pricing') {
     // Default select triple
     document.querySelectorAll('.pkg-card').forEach(function(c){ c.classList.remove('sel'); c.setAttribute('aria-checked','false'); });
@@ -2028,9 +2049,87 @@ function loadDashForEmail(em) {
   });
 }
 
-// Self-service password reset is intentionally disabled until a verified-email
-// reset flow is built (requires server-side email + one-time token storage).
-// The /forgot page directs users to support@canadayouthhire.ca instead.
+// ── Password reset (self-service via emailed token link) ──
+async function doRequestReset() {
+  var em = ((document.getElementById('fg-email')||{value:''}).value||'').trim().toLowerCase();
+  if(!em || em.indexOf('@')<1){ err('fg-email','Please enter a valid email.'); return; }
+  var btn = document.getElementById('fg-submit-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    var r = await _apiCall('/api/auth-api', {action:'request_reset', email:em});
+    if(r && r._http === 429){
+      if(btn){ btn.disabled=false; btn.textContent='Send Reset Link'; }
+      showToast('⏱️ ' + (r.error || 'Too many requests. Try again later.'),'warn');
+      return;
+    }
+    // Always show the same success state regardless of whether the email exists
+    // — server returns generic 200 to prevent enumeration.
+    var f = document.getElementById('forgot-form-wrap');
+    var s = document.getElementById('forgot-success-wrap');
+    if(f) f.style.display='none';
+    if(s) s.style.display='block';
+  } catch(e){
+    console.error('request_reset error:', e);
+    if(btn){ btn.disabled=false; btn.textContent='Send Reset Link'; }
+    showToast('❌ Network error. Please try again.','error');
+  }
+}
+
+function _resetTokenFromUrl() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var t = (p.get('token')||'').trim();
+    return /^[a-f0-9]{64}$/.test(t) ? t : '';
+  } catch(e) { return ''; }
+}
+
+async function doVerifyReset() {
+  var token = _resetTokenFromUrl();
+  if(!token){
+    var fw=document.getElementById('reset-form-wrap');
+    var iw=document.getElementById('reset-invalid-wrap');
+    if(fw) fw.style.display='none';
+    if(iw) iw.style.display='block';
+    return;
+  }
+  var pw  = (document.getElementById('rs-pw') ||{value:''}).value||'';
+  var pw2 = (document.getElementById('rs-pw2')||{value:''}).value||'';
+  if(pw.length < 8){ err('rs-pw','Password must be at least 8 characters.'); return; }
+  if(pw !== pw2){ err('rs-pw2','Passwords do not match.'); return; }
+  var btn = document.getElementById('rs-submit-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Setting password…'; }
+  try {
+    var pwHash = await hashPw(pw);
+    var r = await _apiCall('/api/auth-api', {action:'verify_reset', token:token, new_pw_hash:pwHash});
+    if(r && r._http === 429){
+      if(btn){ btn.disabled=false; btn.textContent='Set New Password'; }
+      showToast('⏱️ ' + (r.error || 'Too many attempts. Try again later.'),'warn');
+      return;
+    }
+    if(!r || r.error){
+      // 400 invalid format / 403 invalid-or-expired token / 500 update failure
+      if(btn){ btn.disabled=false; btn.textContent='Set New Password'; }
+      var msg = (r && r.error) || '';
+      if(/expired|invalid/i.test(msg)){
+        var fw=document.getElementById('reset-form-wrap');
+        var iw=document.getElementById('reset-invalid-wrap');
+        if(fw) fw.style.display='none';
+        if(iw) iw.style.display='block';
+      } else {
+        showToast('❌ ' + (msg || 'Could not update password. Please try again.'),'error');
+      }
+      return;
+    }
+    // Success — wipe token from URL bar (avoids accidental re-share) and route to login.
+    try { window.history.replaceState({}, '', '/login'); } catch(e){}
+    showToast('✅ Password updated. Please sign in with your new password.','success');
+    setTimeout(function(){ go('login'); }, 600);
+  } catch(e){
+    console.error('verify_reset error:', e);
+    if(btn){ btn.disabled=false; btn.textContent='Set New Password'; }
+    showToast('❌ Network error. Please try again.','error');
+  }
+}
 
 function doLogout() {
   _isLoggedIn = false;
@@ -4710,14 +4809,60 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     <button class="back-btn" onclick="go('login')">← Back to Sign In</button>
     <div class="form-header">
       <h1>Reset Password</h1>
-      <p>Need to reset your password? Our team will help you recover your account.</p>
+      <p>Enter the email on your account. We'll send you a link to choose a new password.</p>
     </div>
-    <div style="background:var(--redl);border:1.5px solid rgba(37,99,235,.18);border-radius:12px;padding:20px 22px;margin-bottom:18px">
-      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px">📧 Contact Support</div>
-      <div style="font-size:13.5px;color:var(--gray);line-height:1.6;margin-bottom:14px">Email us at <a href="mailto:support@canadayouthhire.ca?subject=Password%20Reset%20Request" style="color:var(--blue);font-weight:700;text-decoration:underline">support@canadayouthhire.ca</a> from the email address on your account and include your company name. We'll verify your identity and issue a secure reset within 1 business day.</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.5">For your security, we do not currently support self-service password reset. A verified-email reset flow is on our roadmap.</div>
+    <div id="forgot-form-wrap">
+      <div class="fg">
+        <label for="fg-email">Email</label>
+        <input class="fc" type="email" id="fg-email" placeholder="you@company.ca" autocomplete="email">
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" id="fg-submit-btn" onclick="doRequestReset()">Send Reset Link</button>
+      <p class="text-center text-muted text-sm mt16" style="line-height:1.6">The link expires in 1 hour and can only be used once.<br>Still stuck? <a href="mailto:support@canadayouthhire.ca?subject=Password%20Reset%20Help" style="color:var(--blue);font-weight:700;text-decoration:underline">Email support</a>.</p>
     </div>
-    <a href="mailto:support@canadayouthhire.ca?subject=Password%20Reset%20Request" class="btn btn-primary btn-full btn-lg" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Email Support to Reset</a>
+    <div id="forgot-success-wrap" style="display:none">
+      <div style="background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:12px;padding:20px 22px;margin-bottom:18px">
+        <div style="font-size:14px;font-weight:700;color:#065F46;margin-bottom:10px">📬 Check your inbox</div>
+        <div style="font-size:13.5px;color:var(--gray);line-height:1.6">If an account exists for that email, we've sent a password reset link. It will arrive within a minute and expires in 1 hour.</div>
+      </div>
+      <button class="btn btn-outline btn-full" onclick="go('login')">Back to Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET -->
+<div id="page-reset" class="page">
+  <div class="form-page">
+    <button class="back-btn" onclick="go('login')">← Back to Sign In</button>
+    <div class="form-header">
+      <h1>Choose a New Password</h1>
+      <p>Pick a strong password you don't use elsewhere.</p>
+    </div>
+    <div id="reset-form-wrap">
+      <div class="fg">
+        <label for="rs-pw">New Password <span class="req">*</span></label>
+        <div class="pw-wrap">
+          <input class="fc" type="password" id="rs-pw" placeholder="Min. 8 characters" autocomplete="new-password" oninput="checkPwStr(this.value)">
+          <button type="button" class="pw-eye" onclick="togglePw('rs-pw',this)" aria-label="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="pw-bar-wrap"><div class="pw-bar" id="pw-bar"></div></div>
+        <div class="pw-lbl" id="pw-lbl" style="color:var(--muted)"></div>
+      </div>
+      <div class="fg">
+        <label for="rs-pw2">Confirm New Password <span class="req">*</span></label>
+        <div class="pw-wrap">
+          <input class="fc" type="password" id="rs-pw2" placeholder="Repeat password" autocomplete="new-password">
+          <button type="button" class="pw-eye" onclick="togglePw('rs-pw2',this)" aria-label="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" id="rs-submit-btn" onclick="doVerifyReset()">Set New Password</button>
+    </div>
+    <div id="reset-invalid-wrap" style="display:none">
+      <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:12px;padding:20px 22px;margin-bottom:18px">
+        <div style="font-size:14px;font-weight:700;color:#991B1B;margin-bottom:10px">Link invalid or expired</div>
+        <div style="font-size:13.5px;color:var(--gray);line-height:1.6">This reset link can no longer be used. Request a new one — links expire after 1 hour or after a successful password change.</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="go('forgot')">Request New Link</button>
+    </div>
   </div>
 </div>
 

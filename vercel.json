@@ -16,6 +16,7 @@
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin/(.*)", "destination": "/admin.html" },
     { "source": "/forgot", "destination": "/index.html" },
+    { "source": "/reset", "destination": "/index.html" },
     { "source": "/home", "destination": "/index.html" },
     { "source": "/jobs/:id", "destination": "/api/job-page?id=:id" }
   ],
