@@ -225,31 +225,55 @@ export default async function handler(req, res) {
     if (action === 'create_job') {
       const { job } = body;
       if (!job || typeof job !== 'object') return res.status(400).json({ error: 'job payload required' });
+      // Whitelist actual DB columns. Anything else (camelCase legacy keys,
+      // spoofed fields) is dropped before reaching Supabase upsert.
+      const ALLOWED = new Set([
+        'job_id','title','company','loc','prov','type','wage','category',
+        'description','status','posted_date','exp_date','apply_method',
+        'apply_email','apply_url','lang','edu','exp_req','vacancy','ai_use',
+        'remote','requirements','benefits','biz_city','biz_prov',
+        'posted_by_acc_company',
+      ]);
+      const clean = {};
+      for (const k of Object.keys(job)) {
+        if (ALLOWED.has(k)) clean[k] = job[k];
+      }
       // Force the email to be the authenticated user's email (prevent spoofing)
-      job.email = em;
-      job.postedByEmail = em;
-      job.postedByAccCompany = acct.company || job.postedByAccCompany || '';
-      job.created_at = job.created_at || new Date().toISOString();
-      const { data, error } = await sb.from('jobs').upsert(job, { onConflict: 'job_id' }).select();
-      if (error) { console.error('create_job error:', error.message); return res.status(500).json({ error: 'Create failed' }); }
+      clean.email = em;
+      clean.posted_by_acc_company = acct.company || clean.posted_by_acc_company || '';
+      clean.created_at = new Date().toISOString();
+      if (!clean.job_id) return res.status(400).json({ error: 'job_id required' });
+      const { data, error } = await sb.from('jobs').upsert(clean, { onConflict: 'job_id' }).select();
+      if (error) { console.error('create_job error:', error.message, 'payload keys:', Object.keys(clean)); return res.status(500).json({ error: 'Create failed: ' + error.message }); }
       return res.status(200).json({ job: data && data[0] });
     }
 
     // ──────────────── UPDATE_JOB (own only, unless admin) ────────────────
     if (action === 'update_job') {
       const { job_id, patch } = body;
-      if (!job_id || !patch) return res.status(400).json({ error: 'job_id and patch required' });
+      if (!job_id || !patch || typeof patch !== 'object') return res.status(400).json({ error: 'job_id and patch required' });
       // Verify ownership unless admin
       if (!isAdmin) {
         const { data: j } = await sb.from('jobs').select('email').eq('job_id', String(job_id)).maybeSingle();
         if (!j) return res.status(404).json({ error: 'Job not found' });
         if (j.email !== em) return res.status(403).json({ error: 'Not your job' });
       }
-      // Strip fields the user should never change
-      delete patch.email;
-      delete patch.postedByEmail;
-      const { error } = await sb.from('jobs').update(patch).eq('job_id', String(job_id));
-      if (error) return res.status(500).json({ error: 'Update failed' });
+      // Whitelist mutable columns. Drops camelCase legacy keys + spoofed fields.
+      // email + job_id are immutable identity; created_at is set once at insert.
+      const ALLOWED_PATCH = new Set([
+        'title','company','loc','prov','type','wage','category',
+        'description','status','posted_date','exp_date','apply_method',
+        'apply_email','apply_url','lang','edu','exp_req','vacancy','ai_use',
+        'remote','requirements','benefits','biz_city','biz_prov',
+        'posted_by_acc_company','notified_expiry',
+      ]);
+      const cleanPatch = {};
+      for (const k of Object.keys(patch)) {
+        if (ALLOWED_PATCH.has(k)) cleanPatch[k] = patch[k];
+      }
+      if (Object.keys(cleanPatch).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+      const { error } = await sb.from('jobs').update(cleanPatch).eq('job_id', String(job_id));
+      if (error) { console.error('update_job error:', error.message); return res.status(500).json({ error: 'Update failed: ' + error.message }); }
       return res.status(200).json({ ok: true });
     }
 

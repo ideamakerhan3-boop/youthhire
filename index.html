@@ -1252,12 +1252,22 @@ function go(p, skipHistory) {
     if(!window._editingDraftId) {
       clearPostJobForm();
     }
-    // Pre-fill application email
-    var accEmail = (document.getElementById('acc-email')||{value:''}).value || (document.getElementById('r-email')||{value:''}).value;
+    // Pre-fill application email from the LOGGED-IN user — never trust the
+    // current input value (Chrome ignores autocomplete="off" and may re-fill
+    // with a previous user's email cached by the browser, which would then
+    // ship publicly on the job posting). Always overwrite.
+    var loginEmail = '';
+    try { loginEmail = (localStorage.getItem('cjb_email')||'').toLowerCase(); } catch(e){}
+    if(!loginEmail){
+      // Fallback to whatever is in acc-email (set on login restore).
+      loginEmail = ((document.getElementById('acc-email')||{value:''}).value||'').toLowerCase();
+    }
     var pjE = document.getElementById('pj-email');
     var pjE2 = document.getElementById('pj-email2');
-    if(pjE && !pjE.value && accEmail){ pjE.value=accEmail; }
-    if(pjE2 && !pjE2.value && accEmail){ pjE2.value=accEmail; }
+    if(!window._editingDraftId && loginEmail){
+      if(pjE)  pjE.value  = loginEmail;
+      if(pjE2) pjE2.value = loginEmail;
+    }
   }
   if (p==='checkout') {
     // Free registration period — no paid checkout. Redirect to pricing + show
