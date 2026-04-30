@@ -2550,18 +2550,28 @@ async function doPublishWithCredit() {
   _usedCredits  = _useRes.used;
   syncCredits();
 
-  // Now save the job. On failure, attempt to refund the credit we just deducted.
+  // Now save the job. On failure, call server-side refund_use to claw back the
+  // credit we just deducted (refund_use rate-limits + audit-logs on server).
   try {
     await dbSaveJob(newJob);
   } catch(e) {
     console.error('Job save failed after credit deduct, attempting refund:', e);
     try {
-      // best-effort refund: admin add of 1 credit back is admin-only, so use save action
-      // to decrement used by 1 (server allows non-admin to increase used but we want decrease;
-      // server rejects that). Fallback: log + alert user to contact support.
-      // Server-side refund hook would be ideal — for now, alert user.
-      showToast('⚠️ Job save failed. Your credit was deducted — please contact support with this time.','warn');
-    } catch(_e){}
+      var refundRes = await _creditsApi({action:'refund_use', email:_auth.email, pw_hash:_auth.pw_hash, reason:'job_save_failed'});
+      if (refundRes && refundRes.refunded) {
+        // Trust server values
+        _totalCredits = refundRes.total;
+        _usedCredits  = refundRes.used;
+        syncCredits();
+        showToast('⚠️ Job save failed — your credit was refunded. Please try again.','warn');
+      } else {
+        // Refund itself failed (rate limit, server error). Fall back to support copy.
+        showToast('⚠️ Job save failed. Your credit was deducted — please contact hello@canadayouthhire.ca with the time.','warn');
+      }
+    } catch(_e){
+      console.error('refund_use call failed:', _e);
+      showToast('⚠️ Job save failed. Your credit was deducted — please contact hello@canadayouthhire.ca with the time.','warn');
+    }
     return;
   }
   // (fifoDeductCredit removed — server is the source of truth now; local TXNS batch tracking

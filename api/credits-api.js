@@ -151,6 +151,54 @@ export default async function handler(req, res) {
       return res.status(200).json({ total: curTotal, used: curUsed + 1 });
     }
 
+    // ── REFUND_USE: undo one credit deduction when post-flow failed after `use` ──
+    // Real scenario: server deducted via `use`, then create_job 500'd (PR #8 class
+    // of bug). Client calls this to claw back the credit instead of leaving the user
+    // stranded with "contact support". Decrements used by 1 only, never refunds more
+    // than was deducted, never bumps total.
+    //
+    // Abuse model: a malicious client could call this after a successful post to
+    // get a free re-post. Mitigations: (a) rate-limited 3/email/hour so spam can't
+    // drain a paid pack, (b) every refund is logged so we can audit, (c) refund
+    // only works while used > 0. Real fix is wrapping deduct+save in one server
+    // endpoint — tracked as future work.
+    if (action === 'refund_use') {
+      const em = email.toLowerCase();
+      const { rateLimit } = await import('./_lib/ratelimit.js');
+      if (!(await rateLimit(sb, 'refund_use:' + em, 3, 3600_000))) {
+        return res.status(429).json({ error: 'Too many refund attempts. Contact hello@canadayouthhire.ca.' });
+      }
+      const { data: cr } = await sb.from('credits').select('total, used').eq('email', em).maybeSingle();
+      const curTotal = cr?.total || 0;
+      const curUsed = cr?.used || 0;
+      if (curUsed <= 0) {
+        return res.status(400).json({ error: 'No used credits to refund' });
+      }
+      const reasonStr = (typeof reason === 'string' ? reason : '').slice(0, 80) || 'unspecified';
+      const { error } = await sb.from('credits')
+        .update({ used: curUsed - 1, updated_at: new Date().toISOString() })
+        .eq('email', em)
+        .eq('total', curTotal)
+        .eq('used', curUsed);
+      if (error) {
+        const { data: cr2 } = await sb.from('credits').select('total, used').eq('email', em).maybeSingle();
+        const t2 = cr2?.total || 0;
+        const u2 = cr2?.used || 0;
+        if (u2 <= 0) return res.status(400).json({ error: 'No used credits to refund' });
+        const { error: retryErr } = await sb.from('credits')
+          .update({ used: u2 - 1, updated_at: new Date().toISOString() })
+          .eq('email', em).eq('used', u2);
+        if (retryErr) {
+          console.error('refund_use retry failed:', em, retryErr.message);
+          return res.status(500).json({ error: 'Refund failed, contact support' });
+        }
+        console.warn('credit auto-refunded (retry path):', em, 'reason:', reasonStr);
+        return res.status(200).json({ total: t2, used: u2 - 1, refunded: 1 });
+      }
+      console.warn('credit auto-refunded:', em, 'reason:', reasonStr);
+      return res.status(200).json({ total: curTotal, used: curUsed - 1, refunded: 1 });
+    }
+
     // ── PROMO: redeem promo code ──
     if (action === 'promo') {
       if (!code) return res.status(400).json({ error: 'Promo code required' });
