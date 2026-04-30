@@ -2,6 +2,10 @@
 // Caller passes { template_params }; the helper supplies service/user/access creds
 // from env vars (EMAILJS_SERVICE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY).
 //
+// EMAILJS_SERVICE_ID must match an active service in the configured EmailJS
+// account (currently `service_pbhgrg2` per project_youthhire_emailjs.md).
+// Wrong service id surfaces as "[EMAILJS_FAIL] body=The service ID not found".
+//
 // Returns true on success, false on any failure (network, EmailJS error, missing
 // config). Failures are logged but never thrown — callers can decide whether a
 // missed email blocks their flow. For password reset specifically, we still
