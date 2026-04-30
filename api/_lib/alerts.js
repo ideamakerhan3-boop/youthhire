@@ -1,14 +1,14 @@
 // Shared alert utilities for Twilio voice + EmailJS SMS
 // Used by: health-check.js, stripe-webhook.js
 
-const ALERT_PHONE = process.env.ALERT_PHONE || '+12508554037';
-const ALERT_TO = process.env.ALERT_PHONE_EMAIL || '2508554037@txt.bell.ca';
+const ALERT_PHONE = process.env.ALERT_PHONE;
+const ALERT_TO = process.env.ALERT_PHONE_EMAIL;
 
 export async function sendVoiceCall(message) {
   const sid = process.env.TWILIO_SID;
   const token = process.env.TWILIO_TOKEN;
   const from = process.env.TWILIO_FROM;
-  if (!sid || !token || !from) { console.error('Twilio not configured'); return false; }
+  if (!sid || !token || !from || !ALERT_PHONE) { console.error('Twilio not configured'); return false; }
   const safe = String(message).replace(/[<>&]/g, ' ').substring(0, 200);
   const twiml = `<Response><Say voice="alice">${safe}</Say><Pause length="1"/><Say voice="alice">${safe}</Say></Response>`;
   try {
@@ -35,7 +35,7 @@ export async function sendSmsAlert(subject, body) {
   const templateId = process.env.EMAILJS_TEMPLATE_GENERAL || 'template_welcome';
   const publicKey  = process.env.EMAILJS_PUBLIC_KEY;
   const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-  if (!serviceId || !publicKey || !privateKey) { console.error('EmailJS not configured'); return false; }
+  if (!serviceId || !publicKey || !privateKey || !ALERT_TO) { console.error('EmailJS not configured'); return false; }
   try {
     const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
