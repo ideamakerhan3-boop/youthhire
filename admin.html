@@ -1116,7 +1116,7 @@ var _isLoggedIn = false;
 var _afterLoginPage = null;
 var _totalCredits = 0;  // 결제 후 지급
 var _usedCredits = 0;   // 사용 누적
-function getCredits(){ return Math.max(0, _totalCredits - _usedCredits); }
+function getCredits(){ var t=Number(_totalCredits)||0, u=Number(_usedCredits)||0; return Math.max(0, t - u); }
 function syncCredits(){
   var n = getCredits();
   ['dash-credits','ds-credits','ds-credits2'].forEach(function(id){
@@ -2054,8 +2054,9 @@ async function applyPromoCode(code, email, company) {
       return false;
     }
     var promoRes = await _creditsApi({action:'promo', email:auth.email, pw_hash:auth.pw_hash, code:code});
-    if(!promoRes) {
-      showToast('❌ Invalid or expired promo code.','error');
+    if(!promoRes || promoRes.error || typeof promoRes.total !== 'number') {
+      var msg = (promoRes && promoRes.error) || 'Invalid or expired promo code.';
+      showToast('❌ ' + msg, 'error');
       return false;
     }
     var credits = promoRes.credits_given || 3;
