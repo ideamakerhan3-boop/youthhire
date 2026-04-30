@@ -2576,25 +2576,7 @@ async function doPublishWithCredit() {
   window._jobPendingReview = false;
   setApplyMethod('email');
   if(jobStatus==='pending_review'){
-    // 품질 이슈 공고를 ISSUE_JOBS에 자동 등록
-    var mn2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var td2=new Date(); var ds2=mn2[td2.getMonth()]+' '+td2.getDate()+', '+td2.getFullYear();
-    var qualIssues = (window._qualityIssues||[]).join('; ');
-    var newIss = {
-      id: Date.now(),
-      jobId: String(nid),
-      jobTitle: title,
-      company: coName,
-      issueType: 'quality',
-      note: 'Quality issues: ' + (qualIssues||'Admin review required'),
-      action: 'hold',
-      status: 'pending',
-      createdAt: ds2,
-      autoFlagged: true
-    };
-    ISSUE_JOBS.unshift(newIss);
-    dbSaveIssueJob(newIss);
-    updateIssueBadge();
+    // Quality flagging is handled server-side; admin sees the queue at /admin.
     showToast('📋 Submitted for review. Your job will go live once approved by admin.','success');
   } else {
     showToast('✅ Job published! It is now live.','success');
@@ -4291,27 +4273,7 @@ function _initApp() {
             });
             ALL_JOBS = JOBS.concat(JOBBANK_JOBS);
             loadDashForEmail(savedEmail);
-            // pending_review 공고 자동으로 ISSUE_JOBS에 추가
-            dbJobs.forEach(function(dj){
-              if(dj.status==='pending_review'){
-                var alreadyIn = ISSUE_JOBS.some(function(iss){ return String(iss.jobId)===String(dj.job_id); });
-                if(!alreadyIn){
-                  ISSUE_JOBS.unshift({
-                    id: 'db-'+dj.job_id,
-                    jobId: String(dj.job_id),
-                    jobTitle: dj.title||'',
-                    company: dj.company||'',
-                    issueType: 'quality',
-                    note: 'Quality issues: Admin review required',
-                    action: 'hold',
-                    status: 'pending',
-                    createdAt: (dj.created_at||'').substring(0,10),
-                    autoFlagged: true
-                  });
-                }
-              }
-            });
-            updateIssueBadge();
+            // (Issue-job auto-flagging moved to /admin — public app no longer surfaces it)
             try{ doSearch(); renderDash(); updateDashStats(); }catch(e){}
           }
         });
@@ -4421,23 +4383,7 @@ function _initApp() {
   // nav + footer 표시
   var sf = document.getElementById('site-footer'); if(sf) sf.style.display = 'block';
   var sn = document.getElementById('site-nav'); if(sn) sn.style.display = '';
-  // DB에서 이슈 공고 불러오기
-  dbGetIssueJobs().then(function(dbIssues){
-    if(dbIssues && dbIssues.length){
-      dbIssues.forEach(function(di){
-        var exists = ISSUE_JOBS.some(function(iss){ return String(iss.id)===String(di.id); });
-        if(!exists){
-          ISSUE_JOBS.push({
-            id: di.id, jobId: di.job_id, jobTitle: di.job_title||'',
-            company: di.company||'', issueType: di.issue_type||'quality',
-            note: di.note||'', status: di.status||'pending',
-            createdAt: (di.created_at||'').substring(0,10), autoFlagged: true
-          });
-        }
-      });
-      updateIssueBadge();
-    }
-  }).catch(function(){});
+  // (Issue-job loading removed — admin-only feature now lives in /admin)
   // DB에서 모든 active 공고 불러오기 (로그인 여부 상관없이)
   _sb.from('jobs').select('*').eq('status','active').then(function(res){
     var dbJobs = res.data || [];
