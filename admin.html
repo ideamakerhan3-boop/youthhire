@@ -2332,6 +2332,7 @@ function _doRegisterFinish(em, pw, name, co, ds, promoCode) {
   try{
     localStorage.setItem('cjb_logged_in','1');
     localStorage.setItem('cjb_email', em);
+    localStorage.setItem('cjb_pwh', pw);
     localStorage.setItem('cjb_name', name);
     localStorage.setItem('cjb_company', co);
   }catch(e){}
@@ -2424,6 +2425,7 @@ function doLogin() {
     try{
       localStorage.setItem('cjb_logged_in','1');
       localStorage.setItem('cjb_email', em);
+      localStorage.setItem('cjb_pwh', pwHash);
       if(acct.name) localStorage.setItem('cjb_name', acct.name);
       if(acct.company) localStorage.setItem('cjb_company', acct.company);
       if(_isAdminUser) localStorage.setItem('cjb_is_admin','1');
@@ -2507,6 +2509,7 @@ function doLogout() {
   try{
     localStorage.removeItem('cjb_logged_in');
     localStorage.removeItem('cjb_email');
+    localStorage.removeItem('cjb_pwh');
     localStorage.removeItem('cjb_name');
     localStorage.removeItem('cjb_company');
     localStorage.removeItem('cjb_is_admin');
@@ -3900,8 +3903,10 @@ function doConfirm() {
       }
       localStorage.removeItem('cjb_logged_in');
       localStorage.removeItem('cjb_email');
+      localStorage.removeItem('cjb_pwh');
       localStorage.removeItem('cjb_name');
       localStorage.removeItem('cjb_company');
+      localStorage.removeItem('cjb_is_admin');
     }catch(e){}
     _isLoggedIn = false; _totalCredits = 0; _usedCredits = 0;
     updateNavState(); syncCredits();
@@ -4201,6 +4206,7 @@ function logoAdminTap() {
           try {
             localStorage.setItem('cjb_logged_in','1');
             localStorage.setItem('cjb_email', r.email);
+            localStorage.setItem('cjb_pwh', h);
             localStorage.setItem('cjb_name', r.name||'');
             localStorage.setItem('cjb_company', r.company||'');
             localStorage.setItem('cjb_is_admin','1');
@@ -6417,6 +6423,8 @@ async function saveAccSettings(){
     if(newPw !== newPw2){ showToast('⚠️ New passwords do not match.','warn'); return; }
     var newHash = await hashPw(newPw);
     _ACCOUNTS[em].pw = newHash;
+    if(_isAdminUser) _adminPwHash = newHash;
+    try{ localStorage.setItem('cjb_pwh', newHash); }catch(e){}
     dbSaveAccount(em, newHash, (_ACCOUNTS[em]||{}).name||'', (_ACCOUNTS[em]||{}).company||'');
     curPwEl.value=''; newPwEl.value=''; if(newPw2El) newPw2El.value='';
     showToast('✅ Profile and password updated.','success');
@@ -6496,17 +6504,35 @@ function _initApp() {
     if(localStorage.getItem('cjb_logged_in')==='1'){
       _isLoggedIn = true;
       if(localStorage.getItem('cjb_is_admin')==='1') _isAdminUser = true;
-      var savedEmail = localStorage.getItem('cjb_email')||'';
+      var savedEmail = (localStorage.getItem('cjb_email')||'').toLowerCase();
       var savedName = localStorage.getItem('cjb_name')||'';
       var savedCompany = localStorage.getItem('cjb_company')||'';
+      var savedPwh = localStorage.getItem('cjb_pwh')||'';
       if(savedEmail){
+        // CRITICAL: pre-populate _ACCOUNTS with the cached pw_hash so that
+        // subsequent _getAuthForCredits() calls (made by dbGetAccount,
+        // dbGetCredits, _adminApi, applyPromoCode, etc.) actually authenticate.
+        // Without this, every authenticated API call fails after a page reload
+        // because the server doesn't return the pw column for security.
+        if(savedPwh) {
+          _ACCOUNTS[savedEmail] = { pw: savedPwh, name: savedName, company: savedCompany, is_admin: _isAdminUser };
+          if(_isAdminUser) _adminPwHash = savedPwh;
+        } else {
+          // No cached pw_hash → session is unrecoverable, force re-login
+          _isLoggedIn = false; _isAdminUser = false;
+          try{
+            localStorage.removeItem('cjb_logged_in');
+            localStorage.removeItem('cjb_is_admin');
+          }catch(e){}
+        }
         var ae=document.getElementById('acc-email'); if(ae) ae.value=savedEmail;
         loadDashForEmail(savedEmail);
-        // DB에서 계정/크레딧/공고 복원
-        dbGetAccount(savedEmail).then(function(dbAcct){
+        // DB에서 계정/크레딧/공고 복원 (only if we have a usable pw_hash)
+        if(savedPwh) dbGetAccount(savedEmail).then(function(dbAcct){
           if(dbAcct){
-            _ACCOUNTS[savedEmail] = { pw: dbAcct.pw, name: dbAcct.name, company: dbAcct.company, is_admin: dbAcct.is_admin };
-            if(dbAcct.is_admin) { _isAdminUser = true; _adminPwHash = dbAcct.pw; }
+            // KEEP local pw_hash (DB doesn't return pw column for security)
+            _ACCOUNTS[savedEmail] = { pw: savedPwh, name: dbAcct.name, company: dbAcct.company, is_admin: dbAcct.is_admin };
+            if(dbAcct.is_admin) { _isAdminUser = true; _adminPwHash = savedPwh; }
             if(dbAcct.name && !savedName){ try{localStorage.setItem('cjb_name',dbAcct.name);}catch(e){} }
             if(dbAcct.company && !savedCompany){ try{localStorage.setItem('cjb_company',dbAcct.company);}catch(e){} var cn=document.getElementById('dash-co-name'); if(cn) cn.textContent=dbAcct.company; }
           }
