@@ -836,6 +836,32 @@ function _getAuthForCredits() {
   var pw = (em && _ACCOUNTS[em] && _ACCOUNTS[em].pw) ? _ACCOUNTS[em].pw : null;
   return {email:em, pw_hash:pw};
 }
+
+// Privileged employer who may edit posted_date / exp_date on their own listings
+// from My Page. Server-side enforcement lives in api/auth-api.js (update_job).
+var PRIVILEGED_DATE_EDITOR_EMAIL = 'ideamakerhan2@gmail.com';
+function _isPrivilegedDateEditor() {
+  try { return (localStorage.getItem('cjb_email')||'').toLowerCase() === PRIVILEGED_DATE_EDITOR_EMAIL; }
+  catch(e) { return false; }
+}
+// "Mar 28, 2026" <-> "2026-03-28" for <input type="date">
+function _displayDateToIso(s) {
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  try {
+    var parts = String(s).replace(',','').trim().split(/\s+/);
+    var m = mn.indexOf(parts[0]); var d = parseInt(parts[1],10); var y = parseInt(parts[2],10);
+    if(m<0 || !d || !y) return '';
+    return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  } catch(e) { return ''; }
+}
+function _isoToDisplayDate(iso) {
+  if(!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '';
+  var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var parts = iso.split('-');
+  return mn[parseInt(parts[1],10)-1]+' '+parseInt(parts[2],10)+', '+parseInt(parts[0],10);
+}
 async function dbGetCredits(email) {
   var auth=_getAuthForCredits();
   if(auth.email && auth.pw_hash) {
@@ -3372,6 +3398,20 @@ function openEditJobModal(id) {
   var coDisp = document.getElementById('edit-company-display');
   if(coDisp) coDisp.textContent = job.company || '—';
 
+  // Privileged-only date override section (posted_date + exp_date)
+  var datesSec = document.getElementById('edit-dates-section');
+  if(datesSec){
+    if(_isPrivilegedDateEditor()){
+      datesSec.style.display = '';
+      var pd = document.getElementById('edit-posted-date');
+      var ed = document.getElementById('edit-exp-date');
+      if(pd) pd.value = _displayDateToIso(job.date||'');
+      if(ed) ed.value = _displayDateToIso(job.exp||'');
+    } else {
+      datesSec.style.display = 'none';
+    }
+  }
+
   document.getElementById('edit-title-h').textContent = 'Edit: '+job.title;
   openModal('modal-edit');
   // 상단으로 스크롤
@@ -3442,12 +3482,52 @@ function saveEdit() {
       }
     }
   }
+  // Privileged-only: capture date overrides before close so we can patch DB
+  var newPostedDate = '';
+  var newExpDate = '';
+  if(_isPrivilegedDateEditor()){
+    var pdEl = document.getElementById('edit-posted-date');
+    var edEl = document.getElementById('edit-exp-date');
+    var pdIso = pdEl ? pdEl.value : '';
+    var edIso = edEl ? edEl.value : '';
+    if(pdIso) newPostedDate = _isoToDisplayDate(pdIso);
+    if(edIso) newExpDate = _isoToDisplayDate(edIso);
+    if(editingJobId && (newPostedDate || newExpDate)){
+      for(var i=0;i<JOBS.length;i++){
+        if(String(JOBS[i].id)===String(editingJobId)){
+          if(newPostedDate) JOBS[i].date = newPostedDate;
+          if(newExpDate) JOBS[i].exp = newExpDate;
+          break;
+        }
+      }
+      for(var i=0;i<DASH_ROWS.length;i++){
+        if(String(DASH_ROWS[i].id)===String(editingJobId)){
+          if(newPostedDate) DASH_ROWS[i].posted = newPostedDate;
+          if(newExpDate) DASH_ROWS[i].exp = newExpDate;
+          break;
+        }
+      }
+    }
+  }
+
   closeModal('modal-edit');
   renderDash();
   // DB에도 저장
   if(editingJobId){
     var updJob = JOBS.find(function(j){ return String(j.id)===String(editingJobId); });
     if(updJob) dbSaveJob(updJob);
+    // Date override goes through update_job (PATCH) so the server-side gate
+    // in api/auth-api.js (admin or PRIVILEGED_DATE_EDITOR_EMAIL) actually fires.
+    if(_isPrivilegedDateEditor() && (newPostedDate || newExpDate)){
+      var auth=_getAuthForCredits();
+      if(auth.email && auth.pw_hash){
+        var patch = {};
+        if(newPostedDate) patch.posted_date = newPostedDate;
+        if(newExpDate) patch.exp_date = newExpDate;
+        _apiCall('/api/auth-api', {action:'update_job', email:auth.email, pw_hash:auth.pw_hash, job_id:String(editingJobId), patch:patch})
+          .catch(function(e){ console.error('date override patch failed:', e); });
+      }
+    }
   }
   showToast('✅ Posting updated.','success');
 }
@@ -5708,6 +5788,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       </div>
 
       <div class="fh info" style="margin-bottom:16px">⚖️ Edits must remain compliant with Canadian employment law.</div>
+
+      <!-- Privileged-only: posting date + storage period override (gated by account email) -->
+      <div class="post-section" id="edit-dates-section" style="display:none;border:1.5px dashed #F5C842;background:#FFFEF5;border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div class="post-section-head" style="color:#9A6B00">📅 Date Override</div>
+        <div class="field-row">
+          <div class="fg">
+            <label for="edit-posted-date">공고 등록 날짜 (Posted Date)</label>
+            <input class="fc" type="date" id="edit-posted-date">
+          </div>
+          <div class="fg">
+            <label for="edit-exp-date">저장기간 (Expiry Date)</label>
+            <input class="fc" type="date" id="edit-exp-date">
+          </div>
+        </div>
+        <div class="fh">Only your account has permission to override these dates.</div>
+      </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:24px">
         <button class="btn btn-green btn-lg" style="flex:1" onclick="saveEdit()">Save Changes</button>

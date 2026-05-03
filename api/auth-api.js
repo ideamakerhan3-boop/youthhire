@@ -17,6 +17,10 @@ const ALLOWED_ORIGINS = [
   'https://canadayouthhire.ca',
 ];
 
+// Specific employer email allowed (alongside admins) to override
+// posted_date / exp_date on their own job postings via My Page.
+const PRIVILEGED_DATE_EDITOR_EMAIL = 'ideamakerhan2@gmail.com';
+
 function setCors(req, res) {
   const origin = req.headers.origin || '';
   if (ALLOWED_ORIGINS.includes(origin) || /^https:\/\/youthhire-[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
@@ -386,16 +390,21 @@ export default async function handler(req, res) {
       }
       // Whitelist mutable columns. Drops camelCase legacy keys + spoofed fields.
       // email + job_id are immutable identity; created_at is set once at insert.
+      // posted_date/exp_date are DATE_FIELDS — gated to admin or the privileged
+      // date editor account so regular employers can't backdate their listings.
       const ALLOWED_PATCH = new Set([
         'title','company','loc','prov','type','wage','category',
-        'description','status','posted_date','exp_date','apply_method',
+        'description','status','apply_method',
         'apply_email','apply_url','lang','edu','exp_req','vacancy','ai_use',
         'remote','requirements','benefits','biz_city','biz_prov',
         'posted_by_acc_company','notified_expiry',
       ]);
+      const DATE_FIELDS = new Set(['posted_date','exp_date']);
+      const canEditDates = isAdmin || em === PRIVILEGED_DATE_EDITOR_EMAIL;
       const cleanPatch = {};
       for (const k of Object.keys(patch)) {
         if (ALLOWED_PATCH.has(k)) cleanPatch[k] = patch[k];
+        else if (DATE_FIELDS.has(k) && canEditDates) cleanPatch[k] = patch[k];
       }
       if (Object.keys(cleanPatch).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
       const { error } = await sb.from('jobs').update(cleanPatch).eq('job_id', String(job_id));
