@@ -13,9 +13,18 @@ const JOB_COLS = 'job_id, title, company, loc, prov, type, wage, category, remot
  * Serves a pre-rendered HTML page for crawlers with full job details,
  * then redirects real users to the SPA via client-side JS.
  */
+const BOT_RE = /bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu|facebookexternalhit|Twitterbot|LinkedInBot/i;
+
 export default async function handler(req, res) {
   const id = req.query.id;
   if (!id) return res.redirect(301, 'https://www.canadayouthhire.ca/');
+
+  // Server-side bot detection: real users go to the SPA immediately
+  // This avoids the client-side redirect which can confuse JS-rendering crawlers
+  const ua = req.headers['user-agent'] || '';
+  if (!BOT_RE.test(ua)) {
+    return res.redirect(302, `https://www.canadayouthhire.ca/?openJob=${id}`);
+  }
 
   const { data: job } = await sb.from('jobs')
     .select(JOB_COLS)
@@ -171,12 +180,6 @@ ${job.apply_method === 'email' && job.apply_email ? '<p style="margin:16px 0"><s
 <p><a href="${base}/about">About</a> · <a href="${base}/contact">Contact</a> · <a href="${base}/privacy">Privacy</a> · <a href="${base}/terms">Terms</a></p>
 </div>
 
-<script>
-// Real users get redirected to SPA for full experience
-if(navigator.userAgent && !/bot|crawl|spider|slurp|Googlebot|Bingbot|DuckDuck|Yandex|Baidu/i.test(navigator.userAgent)){
-  window.location.replace('${base}/?openJob=${id}');
-}
-</script>
 </body>
 </html>`;
 
