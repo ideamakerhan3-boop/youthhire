@@ -30,22 +30,32 @@ export default async function handler(req, res) {
   const title = esc(job.title) + ' at ' + esc(job.company) + ' — YouthHire';
   const desc = esc(job.title) + ' job in ' + esc(job.loc || 'Canada') + '. ' + esc(job.type || 'Full-Time') + ' position at ' + esc(job.company) + '. Apply on YouthHire.';
   const url = base + '/jobs/' + id;
-  const posted = job.posted_date || (job.created_at ? job.created_at.split('T')[0] : '');
-  const expires = job.exp_date || '';
-  const jobDesc = esc((job.description || '').substring(0, 500));
 
-  // Escape JSON-LD to prevent </script> injection
-  const jsonLd = JSON.stringify({
+  // ISO 8601 dates required by Google for Jobs
+  const posted = toISO(job.posted_date) || toISO(job.created_at) || '';
+  const expires = toISO(job.exp_date) || '';
+
+  const jobDescHtml = descToHTML(job.description || job.title);
+  const salary = parseSalary(job.wage);
+
+  // --- JobPosting JSON-LD ---
+  const jsonLdObj = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     "title": job.title,
-    "description": job.description || job.title,
-    "datePosted": posted,
-    "validThrough": expires || undefined,
+    "description": jobDescHtml,           // HTML preferred by Google for Jobs
+    "datePosted": posted,                 // ISO 8601 required
+    "validThrough": expires || undefined, // ISO 8601 required
     "employmentType": mapType(job.type),
+    "identifier": {
+      "@type": "PropertyValue",
+      "name": "YouthHire",
+      "value": String(id)
+    },
     "hiringOrganization": {
       "@type": "Organization",
-      "name": job.company
+      "name": job.company,
+      "sameAs": base
     },
     "jobLocation": {
       "@type": "Place",
@@ -56,19 +66,43 @@ export default async function handler(req, res) {
         "addressCountry": "CA"
       }
     },
-    "baseSalary": job.wage ? {
-      "@type": "MonetaryAmount",
-      "currency": "CAD",
-      "value": { "@type": "QuantitativeValue", "value": job.wage }
-    } : undefined,
-    "jobLocationType": job.remote === 'remote' ? 'TELECOMMUTE' : undefined,
-    "educationRequirements": job.edu && job.edu !== 'None' ? { "@type": "EducationalOccupationalCredential", "credentialCategory": job.edu } : undefined,
-    "experienceRequirements": job.exp_req && job.exp_req !== 'No experience' ? job.exp_req : undefined,
-    "url": url
-  }).replace(/<\//g, '<\\/'); // prevent </script> breaking out of JSON-LD
+    "directApply": false,
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": url
+    }
+  };
+
+  if (salary) {
+    jsonLdObj.baseSalary = { "@type": "MonetaryAmount", "currency": "CAD", "value": salary };
+  }
+  if (job.remote === 'remote' || job.remote === 'Remote') {
+    jsonLdObj.jobLocationType = 'TELECOMMUTE';
+    jsonLdObj.applicantLocationRequirements = { "@type": "Country", "name": "Canada" };
+  }
+  if (job.edu && job.edu !== 'None') {
+    jsonLdObj.educationRequirements = { "@type": "EducationalOccupationalCredential", "credentialCategory": job.edu };
+  }
+  if (job.exp_req && job.exp_req !== 'No experience') {
+    jsonLdObj.experienceRequirements = job.exp_req;
+  }
+
+  const jsonLd = JSON.stringify(jsonLdObj).replace(/<\//g, '<\\/');
+
+  // --- BreadcrumbList JSON-LD ---
+  const breadcrumbLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": base },
+      { "@type": "ListItem", "position": 2, "name": "Jobs", "item": base + "/" },
+      { "@type": "ListItem", "position": 3, "name": job.title + " at " + job.company, "item": url }
+    ]
+  }).replace(/<\//g, '<\\/');
 
   // Sanitize apply_url to block javascript: URIs
   const safeApplyUrl = job.apply_url && !isUnsafeUri(job.apply_url) ? esc(job.apply_url) : '';
+  const jobDescEscaped = esc((job.description || '').substring(0, 500));
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -89,6 +123,7 @@ export default async function handler(req, res) {
 <meta name="twitter:description" content="${desc}">
 <meta name="robots" content="index, follow">
 <script type="application/ld+json">${jsonLd}</script>
+<script type="application/ld+json">${breadcrumbLd}</script>
 <style>
 body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#0F0F0F;line-height:1.6}
 h1{color:#2563EB;font-size:28px;margin-bottom:4px}
@@ -123,7 +158,7 @@ ${job.lang && job.lang !== 'English' ? '<span>🌐 ' + esc(job.lang) + '</span>'
 ${(job.edu && job.edu !== 'None') || (job.exp_req && job.exp_req !== 'No experience') ? '<p style="font-size:13px;color:#5A5A5A;margin-bottom:8px">' + (job.edu && job.edu !== 'None' ? '🎓 ' + esc(job.edu) : '') + (job.exp_req && job.exp_req !== 'No experience' ? ' · 📋 ' + esc(job.exp_req) : '') + '</p>' : ''}
 ${posted ? '<p style="font-size:13px;color:#919191">Posted: ' + esc(posted) + (expires ? ' · Expires: ' + esc(expires) : '') + '</p>' : ''}
 
-<div class="desc">${jobDesc}${job.description && job.description.length > 500 ? '...' : ''}</div>
+<div class="desc">${jobDescEscaped}${job.description && job.description.length > 500 ? '...' : ''}</div>
 ${job.requirements ? '<h3 style="margin:16px 0 8px;font-size:16px">Requirements</h3><ul>' + job.requirements.split('\\n').filter(Boolean).map(r => '<li>' + esc(r) + '</li>').join('') + '</ul>' : ''}
 ${job.benefits ? '<h3 style="margin:16px 0 8px;font-size:16px">Benefits</h3><ul>' + job.benefits.split('\\n').filter(Boolean).map(b => '<li>' + esc(b) + '</li>').join('') + '</ul>' : ''}
 
@@ -133,7 +168,6 @@ ${job.apply_method === 'email' && job.apply_email ? '<p style="margin:16px 0"><s
 
 <div class="footer">
 <p><strong>YouthHire</strong> — Canada's youth job board. Connecting students, new grads, and young workers with employers hiring for entry-level, part-time, and first-job opportunities.</p>
-<p>Operated by MOSAIC CANADA RESTAURANT INC.</p>
 <p><a href="${base}/about">About</a> · <a href="${base}/contact">Contact</a> · <a href="${base}/privacy">Privacy</a> · <a href="${base}/terms">Terms</a></p>
 </div>
 
@@ -160,6 +194,50 @@ function isUnsafeUri(uri) {
   if (!uri) return true;
   const lower = uri.trim().toLowerCase();
   return lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:');
+}
+
+/**
+ * Convert any date string to ISO 8601 YYYY-MM-DD.
+ * Handles: "2026-05-03", "2026-05-03T...", "May 3, 2026", etc.
+ */
+function toISO(s) {
+  if (!s) return '';
+  const str = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0, 10);
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  return '';
+}
+
+/**
+ * Convert plain-text description to minimal HTML for Google for Jobs.
+ */
+function descToHTML(text) {
+  if (!text) return '';
+  return text.split(/\n{2,}/)
+    .map(p => '<p>' + p.replace(/\n/g, '<br>') + '</p>')
+    .join('');
+}
+
+/**
+ * Parse wage string like "$22 – $27/hr", "$50,000/yr" into QuantitativeValue.
+ * Returns null if unparseable.
+ */
+function parseSalary(wage) {
+  if (!wage) return null;
+  const s = String(wage);
+  let unitText = 'HOUR';
+  if (/\byr\b|year|annual/i.test(s)) unitText = 'YEAR';
+  else if (/\bmo\b|month/i.test(s)) unitText = 'MONTH';
+  else if (/\bwk\b|week/i.test(s)) unitText = 'WEEK';
+  else if (/\bday\b/i.test(s)) unitText = 'DAY';
+  const nums = s.replace(/[$,]/g, '').match(/\d+(?:\.\d+)?/g);
+  if (!nums || nums.length === 0) return null;
+  const values = nums.map(Number);
+  if (values.length === 1) {
+    return { "@type": "QuantitativeValue", "value": values[0], "unitText": unitText };
+  }
+  return { "@type": "QuantitativeValue", "minValue": Math.min(...values), "maxValue": Math.max(...values), "unitText": unitText };
 }
 
 function mapType(t) {

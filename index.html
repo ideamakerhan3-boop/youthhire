@@ -51,7 +51,6 @@
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "YouthHire",
-  "legalName": "MOSAIC CANADA RESTAURANT INC.",
   "url": "https://www.canadayouthhire.ca",
   "description": "Youth employment platform connecting students, new grads, and young workers with Canadian employers hiring for entry-level and part-time roles.",
   "areaServed": {
@@ -1166,19 +1165,29 @@ function _updateJobSEO(job) {
   if(og2) og2.setAttribute('content', d);
   var ogt = document.querySelector('meta[property="og:type"]');
   if(ogt) ogt.setAttribute('content', 'article');
-  // JSON-LD JobPosting
+  // JSON-LD JobPosting — Google for Jobs spec compliant
   var existing = document.getElementById('job-jsonld');
   if(existing) existing.remove();
   var sc = document.createElement('script');
   sc.type = 'application/ld+json'; sc.id = 'job-jsonld';
-  sc.textContent = JSON.stringify({
+  // toISO: convert any date to YYYY-MM-DD (required by Google for Jobs)
+  function _toISO(s){ if(!s) return ''; var str=String(s).trim(); if(/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0,10); var d=new Date(str); return isNaN(d.getTime())?'':d.toISOString().split('T')[0]; }
+  // descToHTML: plain text → HTML paragraphs
+  function _descToHTML(t){ if(!t) return ''; return t.split(/\n{2,}/).map(function(p){return '<p>'+p.replace(/\n/g,'<br>')+'</p>';}).join(''); }
+  var _jld = {
     "@context":"https://schema.org", "@type":"JobPosting",
-    "title": job.title, "description": job.desc||job.title,
-    "datePosted": job.postedAt||job.created_at||'',
+    "title": job.title,
+    "description": _descToHTML(job.description||job.desc||job.title),
+    "datePosted": _toISO(job.posted_date||job.postedAt||job.created_at||''),
     "employmentType": job.type||'FULL_TIME',
-    "hiringOrganization": {"@type":"Organization","name":job.company},
-    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}}
-  });
+    "identifier": {"@type":"PropertyValue","name":"YouthHire","value":String(job.job_id||job.id||'')},
+    "hiringOrganization": {"@type":"Organization","name":job.company,"sameAs":"https://www.canadayouthhire.ca"},
+    "jobLocation": {"@type":"Place","address":{"@type":"PostalAddress","addressLocality":job.loc||'',"addressRegion":job.prov||'',"addressCountry":"CA"}},
+    "directApply": false
+  };
+  if(job.exp_date) _jld.validThrough = _toISO(job.exp_date);
+  if(job.remote==='remote'||job.remote==='Remote'){ _jld.jobLocationType='TELECOMMUTE'; _jld.applicantLocationRequirements={"@type":"Country","name":"Canada"}; }
+  sc.textContent = JSON.stringify(_jld);
   document.head.appendChild(sc);
 }
 
@@ -5905,7 +5914,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   </div>
   <div class="footer-bottom">
     <div class="footer-legal">
-      © 2025–2026 YouthHire (canadayouthhire.ca). All rights reserved. Operated by MOSAIC CANADA RESTAURANT INC.<br>
+      © 2025–2026 YouthHire (canadayouthhire.ca). All rights reserved.<br>
       Governed by <em>PIPEDA</em>, <em>CHRA</em>, and applicable provincial employment standards law.<br>
       <span style="font-size:10px;opacity:.5">Contains information licensed under the <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color:inherit;text-decoration:underline">Open Government Licence — Canada</a>.</span>
     </div>
