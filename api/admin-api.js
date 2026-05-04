@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyAndUpgrade } from './_lib/verify.js';
+import { notifyIndexNow } from './_lib/indexnow.js';
 
 // Service key bypasses RLS. All admin operations gated by is_admin check.
 const sb = createClient(
@@ -98,6 +99,10 @@ export default async function handler(req, res) {
       if (!job_id || !status) return res.status(400).json({ error: 'job_id and status required' });
       const { error } = await sb.from('jobs').update({ status }).eq('job_id', String(job_id));
       if (error) return res.status(500).json({ error: 'Update failed' });
+      // Notify search engines when admin activates a job (fire-and-forget)
+      if (status === 'active') {
+        notifyIndexNow(String(job_id)).catch(() => {});
+      }
       return res.status(200).json({ ok: true });
     }
 
