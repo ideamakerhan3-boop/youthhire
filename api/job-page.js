@@ -6,7 +6,7 @@ const sb = createClient(
 );
 
 // Only fetch columns needed for SEO rendering
-const JOB_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, lang, edu, exp_req, description, requirements, benefits, apply_method, apply_url, apply_email, posted_date, created_at, exp_date';
+const JOB_COLS = 'job_id, title, company, loc, prov, type, wage, category, remote, lang, edu, exp_req, description, requirements, benefits, apply_method, apply_url, apply_email, posted_date, created_at, exp_date, status';
 
 /**
  * GET /api/job-page?id=585
@@ -63,6 +63,7 @@ export default async function handler(req, res) {
     },
     "hiringOrganization": {
       "@type": "Organization",
+      "@id": base + "/#organization",
       "name": job.company,
       "sameAs": base
     },
@@ -76,10 +77,9 @@ export default async function handler(req, res) {
       }
     },
     "directApply": false,
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": url
-    }
+    "specialCommitments": "Youth Friendly, Students Welcome, Entry-Level Opportunities Across Canada",
+    "url": url,
+    "mainEntityOfPage": url
   };
 
   if (salary) {
@@ -88,12 +88,24 @@ export default async function handler(req, res) {
   if (job.remote === 'remote' || job.remote === 'Remote') {
     jsonLdObj.jobLocationType = 'TELECOMMUTE';
     jsonLdObj.applicantLocationRequirements = { "@type": "Country", "name": "Canada" };
+  } else {
+    jsonLdObj.jobLocationType = 'ONSITE';
   }
   if (job.edu && job.edu !== 'None') {
     jsonLdObj.educationRequirements = { "@type": "EducationalOccupationalCredential", "credentialCategory": job.edu };
   }
   if (job.exp_req && job.exp_req !== 'No experience') {
     jsonLdObj.experienceRequirements = job.exp_req;
+  }
+  if (job.benefits) {
+    jsonLdObj.jobBenefits = job.benefits;
+  }
+  if (job.apply_email) {
+    jsonLdObj.applicationContact = {
+      "@type": "ContactPoint",
+      "email": job.apply_email,
+      "contactType": "application"
+    };
   }
 
   const jsonLd = JSON.stringify(jsonLdObj).replace(/<\//g, '<\\/');
@@ -130,7 +142,7 @@ export default async function handler(req, res) {
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${desc}">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="${job.status === 'active' ? 'index, follow' : 'noindex, follow'}">
 <script type="application/ld+json">${jsonLd}</script>
 <script type="application/ld+json">${breadcrumbLd}</script>
 <style>
